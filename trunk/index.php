@@ -24,7 +24,7 @@
 			if($ip) {
 				$port = isset($matches['port']) && $matches['port'] ? $matches['port'] : 80;
 				ini_set('user_agent', 'Cachechu');
-				$socket = @fsockopen($domain, $port, $errno, $errstr, 3);
+				$socket = @fsockopen($domain, $port, $errno, $errstr, 5);
 				if($socket) {
 					$file = isset($matches['file']) ? $matches['file'] : '/'; // No need to URL encode
 					$out = "GET $file?get=1&net=gnutella2&client=TEST&version=Cachechu HTTP/1.0\r\n";
@@ -32,7 +32,7 @@
 					$out .= "Connection: Close\r\n\r\n";
 					$response = '';
 					if(@fwrite($socket, $out) !== FALSE) {
-						stream_set_timeout($socket, 2);
+						stream_set_timeout($socket, 5);
 						$response = stream_get_contents($socket);
 					}
 					fclose($socket);
@@ -93,12 +93,17 @@
 	// Add host to cache
 	if($update && $host) {
 		$error = TRUE;
-		if(strpos($host, $_SERVER['REMOTE_ADDR']) !== FALSE && preg_match(IP_REGEX, $host)) {
+		if(strpos($host, $_SERVER['REMOTE_ADDR']) === TRUE && preg_match(IP_REGEX, $host)) {
 			list($ip, $port) = explode(':', $host);
-			$socket = @fsockopen($ip, $port, $error_num, $error, 1);
+			$socket = @fsockopen($ip, $port, $error_num, $error, 5);
 			if($socket) {
+				if(@fwrite($socket, "GNUTELLA CONNECT/0.6\r\n\r\n") === TRUE) {
+					stream_set_timeout($socket, 5);
+					if(stream_get_contents($socket, 12 == 'GNUTELLA CONNECT/0.6')) {
+						$error = FALSE;
+					}
+				}
 				fclose($socket);
-				$error = FALSE;
 			}
 		}
 		if(!$error) {
@@ -106,7 +111,7 @@
 			$new_lines = array();
 			$lines = file_exists(HOST_PATH) ? file(HOST_PATH) : array();
 			$client = ereg_replace('[\\r\\n\\|]', '', $_SERVER['HTTP_USER_AGENT']); //  Don't want no problems in host file
-			$lines[] = "$host|" . time() . "|$client|\n"; 
+			$lines[] = "$host|" . time() . "|$client|\n";
 			foreach($lines as $line) {
 				list($ip, $time, $client) = explode('|', $line);
 				$age = time() - $time;
@@ -122,7 +127,7 @@
 			if($host_count > HOST_LIMIT) {
 				$new_lines = array_slice($new_lines, $host_count - HOST_LIMIT, HOST_LIMIT);
 			}
-			@file_put_contents(HOST_PATH, $new_lines, LOCK_EX);
+			@file_put_contents(HOST_PATH, implode("\r\n", $new_lines), LOCK_EX);
 			echo "I|update|OK\n";
 		} else {
 			echo "I|update|WARNING|Rejected IP\n";
