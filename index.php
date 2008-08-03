@@ -85,7 +85,7 @@
 			if($host_count > HOST_LIMIT) {
 				$new_lines = array_slice($new_lines, $host_count - HOST_LIMIT, HOST_LIMIT);
 			}
-			
+
 			// Save hosts file and ignores concurrency issues
 			@file_put_contents(HOST_PATH, implode("\r\n", $new_lines), LOCK_EX);
 			echo "I|update|OK\n";
@@ -124,6 +124,8 @@
 
 		// Test "random" GWebCache, submitted cache goes to the end of the list
 		$test_url = key($test_urls); // First URL
+		$test_ip = '';
+		$test_status = '';
 		if(preg_match(URL_REGEX, $test_url, $matches)) {
 			$error = NULL;
 			$domain = $matches['domain'];
@@ -165,10 +167,12 @@
 				$urls[$test_url] = NULL; // Remove from cache after testing BAD a 2nd time, or no IP
 			} else {
 				$urls[$test_url]['time'] = time();
-				$urls[$test_url]['status'] = $error ? 'BAD' : 'OK';
-				$urls[$test_url]['ip'] = $ip;
+				$test_status = $error ? 'BAD' : 'OK';
+				$urls[$test_url]['status'] = $test_status;
+				$test_ip = $ip;
+				$urls[$test_url]['ip'] = $test_ip;
 			}
-		} else {
+		} else if($test_url) {
 			$urls[$test_url] = NULL; // For whatever reason the URL is invalid
 		}
 
@@ -176,15 +180,22 @@
 		$output = '';
 		foreach($urls as $xurl => $values) {
 			if($values) {
-				$output .= "$xurl|" . $values['time'] . '|' . $values['status'] . '|' . $values['ip'] . "|\r\n";
+				$time = $values['time'];
+				$status = $values['status'];
+				$ip = $values['ip'];
+				if($test_ip === $ip && $test_url !== $xurl && $test_status === $status && $status === 'OK') {
+					$status = 'DUPE'; // Duplicate IP that is OK but will not be output on GET
+					$urls[$test_url]['status'] = $status;
+				}
+				$output .= "$xurl|$time|$status|$ip|\r\n";
 			}
 		}
 
 		// Save URL file and ignore concurrency issues
 		@file_put_contents(URL_PATH, $output, LOCK_EX);
-		
+
 		// Output update notice (returns OK on untested URLs)
-		echo isset($urls[$url]) && $urls[$url]['status'] != 'BAD' ? "I|update|OK\n" : "I|update|WARNING|Rejected URL\n";
+		echo isset($urls[$url]) && $urls[$url]['status'] !== 'BAD' ? "I|update|OK\n" : "I|update|WARNING|Rejected URL\n";
 	}
 
 	if($get) {
