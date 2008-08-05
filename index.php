@@ -16,21 +16,25 @@
 
 	define('HOST_PATH', 'store/hosts');
 	define('URL_PATH', 'store/urls');
+	define('BAN_PATH', 'store/banned');
 	define('HOST_LIMIT', 30); // Only store 30 hosts
-	define('MAX_HOST_AGE', 9000); // 2.5 hours
+	define('MAX_HOST_AGE', 10800); // 3 hours
 	define('MAX_URL_AGE', 86400); // 24 hours
+	define('BAN_TIME', 3600); // 1 hour
 	define('IP_REGEX', '/\\A((?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)):(\\d+)\\z/');
 	define('URL_REGEX', '/\\Ahttp:\/\/(?P<domain>[-A-Z0-9.]+)(?::(?P<port>[0-9]+))?(?P<file>\/[-A-Z0-9+&@#\/%=~_|!:,.;]*)?\\z/i');
 	define('OUTPUT_REGEX', '%\\A(?:(?:H\\|(?:[0-9]{1,3}\\.){3}[0-9]{1,3}.*)|(?:U\\|http://.+)|(?:[A-GI-TV-Z]\\|.*))\\z%i');
 
-	$client = isset($_GET['client']) ? $_GET['client'] : '';
-	$get    = isset($_GET['get']) ? $_GET['get'] : '';
-	$host   = isset($_GET['ip']) ? $_GET['ip'] : '';
-	$net    = isset($_GET['net']) ? $_GET['net'] : '';
-	$ping   = isset($_GET['ping']) ? $_GET['ping'] : '';
-	$update = isset($_GET['update']) ? $_GET['update'] : '';
-	$url    = isset($_GET['url']) ? trim($_GET['url']) : '';
-
+	$remote_ip = $_SERVER['REMOTE_ADDR'];
+	$now       = time();
+	$client    = isset($_GET['client']) ? $_GET['client'] : '';
+	$get       = isset($_GET['get']) ? $_GET['get'] : '';
+	$host      = isset($_GET['ip']) ? $_GET['ip'] : '';
+	$net       = isset($_GET['net']) ? $_GET['net'] : '';
+	$ping      = isset($_GET['ping']) ? $_GET['ping'] : '';
+	$update    = isset($_GET['update']) ? $_GET['update'] : '';
+	$url       = isset($_GET['url']) ? trim($_GET['url']) : '';
+	
 	if(!empty($_GET)) {
 		header('Content-Type: text/plain');
 		if(strtolower($net) != 'gnutella2') {
@@ -39,19 +43,35 @@
 			}
 			die("ERROR: Network Not Supported\n");
 		}
-	}
-	else {
+	} else {
 		echo '<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd"><html><head><meta http-equiv="Content-Type" content="text/html; charset=utf-8"><title>Cachechu!</title></head><body><p>I Choose You! Cachechu!</p><form method="GET" action="."><div><label for="url">URL:</label> <input type="text" name="url" id="url" size="50"><input type="hidden" name="update" value="1"><input type="hidden" name="net" value="gnutella2"> <input type="submit"></div></form></body></html>';
 	}
 
-	if($ping) {
-		echo "I|pong|Cachechu|gnutella2\n";
+	// Basic spam protection (1 update per hour [default])
+	if($update) {
+		$banned = file_exists(BAN_PATH) ? @unserialize(file_get_contents(BAN_PATH)) : array();
+		if($banned == FALSE) { $banned = array(); } // File could not be unserialized
+		if(isset($banned[$remote_ip]) && $now - $banned[$remote_ip] <= BAN_TIME) {
+			die("ERROR: Client returned too early\n");
+		} else {
+			foreach($banned as $ip => $time) {
+				if($now - $time > BAN_TIME) {
+					unset($banned[$ip]); // Remove old banned hosts
+				}
+			}
+			$banned[$remote_ip] = $now; // Add current IP to banned list
+			@file_put_contents(BAN_PATH, serialize($banned));
+			echo "I|update|period|", BAN_TIME, "\n";
+		}
 	}
+	
+	// Pong!
+	if($ping) { echo "I|pong|Cachechu|gnutella2\n";	}
 
 	// Add host to cache
 	if($update && $host) {
 		$error = TRUE;
-		if(strpos($host, $_SERVER['REMOTE_ADDR']) !== FALSE && preg_match(IP_REGEX, $host)) {
+		if(strpos($host, $remote_ip) !== FALSE && preg_match(IP_REGEX, $host)) {
 			list($ip, $port) = explode(':', $host);
 			$socket = @fsockopen($ip, $port, $error_num, $error, 5);
 			if($socket) {
@@ -69,10 +89,10 @@
 			$new_lines = array();
 			$lines = file_exists(HOST_PATH) ? file(HOST_PATH) : array();
 			$client = ereg_replace('[\\r\\n\\|]', '', $_SERVER['HTTP_USER_AGENT']); //  Don't want no problems in host file
-			$lines[] = "$host|" . time() . "|$client|\n";
+			$lines[] = "$host|" . $now . "|$client|\n";
 			foreach($lines as $line) {
 				list($ip, $time, $client) = explode('|', $line);
-				$age = time() - $time;
+				$age = $now - $time;
 				if($age < MAX_HOST_AGE && preg_match(IP_REGEX, $ip)) {
 					list($ip, $port) = explode(':', $ip);
 					// Remove duplicates and old hosts
@@ -86,7 +106,7 @@
 				$new_lines = array_slice($new_lines, $host_count - HOST_LIMIT, HOST_LIMIT);
 			}
 
-			// Save hosts file and ignores concurrency issues
+			// Save hosts file and ignore concurrency issues
 			@file_put_contents(HOST_PATH, implode("\r\n", $new_lines), LOCK_EX);
 			echo "I|update|OK\n";
 		} else {
@@ -107,7 +127,7 @@
 			list($xurl, $time, $status, $ip) = explode('|', trim($line));
 			if($xurl) {
 				$urls[$xurl] = array('time' => $time, 'status' => $status, 'ip' => $ip);
-				if($time === 0 || time() - $time >= MAX_URL_AGE) {
+				if($time === 0 || $now - $time >= MAX_URL_AGE) {
 					$test_urls[$xurl] = $status; // Test old URLs
 				}
 			}
@@ -164,16 +184,16 @@
 				}
 			}
 			if(is_null($error) || ($error && !$urls[$test_url]['status'])) {
-				$urls[$test_url] = NULL; // Remove from cache after testing BAD a 2nd time, or no IP
+				unset($urls[$test_url]); // Remove from cache after testing BAD a 2nd time, or no IP
 			} else {
-				$urls[$test_url]['time'] = time();
+				$urls[$test_url]['time'] = $now;
 				$test_status = $error ? 'BAD' : 'OK';
 				$urls[$test_url]['status'] = $test_status;
 				$test_ip = $ip;
 				$urls[$test_url]['ip'] = $test_ip;
 			}
 		} else if($test_url) {
-			$urls[$test_url] = NULL; // For whatever reason the URL is invalid
+			unset($urls[$test_url]); // For whatever reason the URL is invalid
 		}
 
 		// Generate URL output
@@ -204,34 +224,28 @@
 		$lines = file_exists(HOST_PATH) ? file(HOST_PATH) : array();
 		foreach($lines as $line) {
 			list($ip, $time) = explode('|', $line);
-			$age = time() - $time;
+			$age = $now - $time;
 			if($age < MAX_HOST_AGE) {
 				echo "H|$ip|$age\n";
 				++$count;
 			}
 		}
-		if(!$count) {
-			echo "I|NO-HOSTS\n";
-		}
+		if(!$count) { echo "I|NO-HOSTS\n"; }
 
 		// Output URLs
 		$count = 0;
 		$lines = file_exists(URL_PATH) ? file(URL_PATH) : array();
 		foreach($lines as $line) {
 			list($url, $time, $status) = explode('|', $line);
-			$age = $time > 0 ? time() - $time : 3600;
+			$age = $time > 0 ? $now - $time : 3600;
 			if($age < MAX_URL_AGE && $status === 'OK') {
 				echo "U|$url|$age\n";
 				++$count;
 			}
 		}
-		if(!$count) {
-			echo "I|NO-URLS\n";
-		}
+		if(!$count) { echo "I|NO-URLS\n"; }
 	}
 
 	// Must output something if no requests cause output
-	if(!ob_get_contents()) {
-		echo "I|something\n";
-	}
+	if(!ob_get_contents()) { echo "I|something\n"; }
 ?>
