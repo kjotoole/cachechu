@@ -14,17 +14,14 @@
 	// You should have received a copy of the GNU General Public License
 	// along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-	define('HOST_PATH', 'store/hosts');
-	define('URL_PATH', 'store/urls');
-	define('BAN_PATH', 'store/banned');
-	define('HOST_LIMIT', 30); // Only store 30 hosts
+	define('HOST_PATH', 'data/hosts.dat');
+	define('URL_PATH', 'data/urls.dat');
+	define('BAN_PATH', 'data/bans.dat');
+	define('HOST_LIMIT', 50); // Store 50 hosts
 	define('MAX_HOST_AGE', 10800); // 3 hours
 	define('MAX_URL_AGE', 86400); // 24 hours
-	define('BAN_TIME', 3600); // 1 hour
-	define('IP_REGEX', '/\\A((?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)):(\\d+)\\z/');
-	define('URL_REGEX', '/\\Ahttp:\/\/(?P<domain>[-A-Z0-9.]+)(?::(?P<port>[0-9]+))?(?P<file>\/[-A-Z0-9+&@#\/%=~_|!:,.;]*)?\\z/i');
-	define('OUTPUT_REGEX', '%\\A(?:(?:H\\|(?:[0-9]{1,3}\\.){3}[0-9]{1,3}.*)|(?:U\\|http://.+)|(?:[A-GI-TV-Z]\\|.*))\\z%i');
-
+	define('BAN_TIME', 3600); // 1 hour	
+	
 	$remote_ip = $_SERVER['REMOTE_ADDR'];
 	$now       = time();
 	$client    = isset($_GET['client']) ? $_GET['client'] : '';
@@ -34,42 +31,43 @@
 	$ping      = isset($_GET['ping']) ? $_GET['ping'] : '';
 	$update    = isset($_GET['update']) ? $_GET['update'] : '';
 	$url       = isset($_GET['url']) ? trim($_GET['url']) : '';
-	
+
 	if(!empty($_GET)) {
 		header('Content-Type: text/plain');
 		if(strtolower($net) != 'gnutella2') {
-			if(!$net) { // Kill off Gnutella clients, such as BearShare
-				header('HTTP/1.0 404 Not Found');
-			}
+			header('HTTP/1.0 404 Not Found');
 			die("ERROR: Network Not Supported\n");
 		}
+	} else if(file_exists('index.html')) {
+		require('index.html');
 	} else {
-		echo '<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd"><html><head><meta http-equiv="Content-Type" content="text/html; charset=utf-8"><title>Cachechu!</title></head><body><p>I Choose You! Cachechu!</p><form method="GET" action="."><div><label for="url">URL:</label> <input type="text" name="url" id="url" size="50"><input type="hidden" name="update" value="1"><input type="hidden" name="net" value="gnutella2"> <input type="submit"></div></form></body></html>';
+		header('Content-Type: text/plain');
 	}
 
 	// Basic spam protection (1 update per hour [default])
 	if($update) {
-		$banned = file_exists(BAN_PATH) ? @unserialize(file_get_contents(BAN_PATH)) : array();
-		if($banned == FALSE) { $banned = array(); } // File could not be unserialized
-		if(isset($banned[$remote_ip]) && $now - $banned[$remote_ip] <= BAN_TIME) {
+		$bans = file_exists(BAN_PATH) ? @unserialize(file_get_contents(BAN_PATH)) : array();
+		if($bans == FALSE) { $bans = array(); } // File could not be unserialized
+		if(isset($bans[$remote_ip]) && $now - $bans[$remote_ip] <= BAN_TIME) {
 			die("ERROR: Client returned too early\n");
 		} else {
-			foreach($banned as $ip => $time) {
+			foreach($bans as $ip => $time) {
 				if($now - $time > BAN_TIME) {
-					unset($banned[$ip]); // Remove old banned hosts
+					unset($bans[$ip]); // Remove old banned hosts
 				}
 			}
-			$banned[$remote_ip] = $now; // Add current IP to banned list
-			@file_put_contents(BAN_PATH, serialize($banned));
+			$bans[$remote_ip] = $now; // Add current IP to banned list
+			@file_put_contents(BAN_PATH, serialize($bans));
 			echo "I|update|period|", BAN_TIME, "\n";
 		}
 	}
-	
+
 	// Pong!
-	if($ping) { echo "I|pong|Cachechu|gnutella2\n";	}
+	if($ping) { echo "I|pong|Cachechu R7|gnutella2\n";	}
 
 	// Add host to cache
 	if($update && $host) {
+		define('IP_REGEX', '/\\A((?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)):(\\d+)\\z/');
 		$error = TRUE;
 		if(strpos($host, $remote_ip) !== FALSE && preg_match(IP_REGEX, $host)) {
 			list($ip, $port) = explode(':', $host);
@@ -115,6 +113,8 @@
 	}
 
 	if($update && $url) {
+		define('OUTPUT_REGEX', '%\\A(?:(?:H\\|(?:[0-9]{1,3}\\.){3}[0-9]{1,3}.*)|(?:U\\|http://.+)|(?:[A-GI-TV-Z]\\|.*))\\z%i');
+		define('URL_REGEX', '/\\Ahttp:\/\/(?P<domain>[-A-Z0-9.]+)(?::(?P<port>[0-9]+))?(?P<file>\/[-A-Z0-9+&@#\/%=~_|!:,.;]*)?\\z/i');
 		// Makes it easier to detect duplicates if index page is removed
 		$url = preg_replace('/(?:default|index)\\.(?:aspx?|cfm|cgi|htm|html|jsp|php)$/iD', '', $url);
 		$url = rtrim($url, '/'); // Trims slashes to avoid duplicates
@@ -210,10 +210,9 @@
 				$output .= "$xurl|$time|$status|$ip|\r\n";
 			}
 		}
-
-		// Save URL file and ignore concurrency issues
+		
+		// Save URL files and ignore concurrency issues
 		@file_put_contents(URL_PATH, $output, LOCK_EX);
-
 		// Output update notice (returns OK on untested URLs)
 		echo isset($urls[$url]) && $urls[$url]['status'] !== 'BAD' ? "I|update|OK\n" : "I|update|WARNING|Rejected URL\n";
 	}
