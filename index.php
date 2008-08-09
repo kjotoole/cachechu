@@ -17,11 +17,14 @@
 	define('HOST_PATH', 'data/hosts.dat');
 	define('URL_PATH', 'data/urls.dat');
 	define('BAN_PATH', 'data/bans.dat');
-	define('HOST_LIMIT', 50); // Store 50 hosts
+	define('HOST_LIMIT', 50); // Store 50 hosts,
+	define('HOST_OUTPUT', 30); // Output at most 30 hosts
+	define('URL_OUTPUT', 15); // Output at most 15 URLs
 	define('MAX_HOST_AGE', 10800); // 3 hours
 	define('MAX_URL_AGE', 86400); // 24 hours
-	define('BAN_TIME', 3600); // 1 hour	
-	
+	define('BAN_TIME', 3600); // 1 hour
+	define('ADVERTISE', FALSE);
+
 	$remote_ip = $_SERVER['REMOTE_ADDR'];
 	$now       = time();
 	$client    = isset($_GET['client']) ? $_GET['client'] : '';
@@ -63,7 +66,7 @@
 	}
 
 	// Pong!
-	if($ping) { echo "I|pong|Cachechu R7|gnutella2\n";	}
+	if($ping) { echo "I|pong|Cachechu R10|gnutella2\n";	}
 
 	// Add host to cache
 	if($update && $host) {
@@ -71,11 +74,11 @@
 		$error = TRUE;
 		if(strpos($host, $remote_ip) !== FALSE && preg_match(IP_REGEX, $host)) {
 			list($ip, $port) = explode(':', $host);
-			$socket = @fsockopen($ip, $port, $error_num, $error, 5);
+			$socket = @fsockopen($ip, $port,  $errno, $errstr, 5);
 			if($socket) {
 				if(@fwrite($socket, "GNUTELLA CONNECT/0.6\r\n\r\n") !== FALSE) {
 					stream_set_timeout($socket, 5);
-					if(stream_get_contents($socket, 12) === 'GNUTELLA CONNECT/0.6') {
+					if(stream_get_contents($socket, 12) === 'GNUTELLA/0.6') {
 						$error = FALSE;
 					}
 				}
@@ -157,15 +160,22 @@
 				ini_set('user_agent', 'Cachechu');
 				$socket = @fsockopen($domain, $port, $errno, $errstr, 5);
 			}
-			if($socket) {
+			if($socket) {			
 				$file = isset($matches['file']) ? $matches['file'] : '/'; // No need to URL encode
-				$out = "GET $file?get=1&net=gnutella2&client=TEST&version=Cachechu HTTP/1.0\r\n";
+				$query = "$file?get=1&net=gnutella2&client=TEST&version=Cachechu";
+				if(ADVERTISE) {
+					$current_url = 'http://' . $_SERVER['SERVER_NAME'];
+					if($_SERVER['SERVER_PORT'] != 80) { $current_url .= ':' . $_SERVER['SERVER_PORT']; }
+					$current_url .= rtrim(str_replace('index.php', '', $_SERVER['PHP_SELF']), '/');
+					$query .= '&update=1&url=' . urlencode($current_url);
+				}
+				$out = "GET $query HTTP/1.0\r\n";
 				$out .= "Host: $domain\r\n";
 				$out .= "Connection: Close\r\n\r\n";
 				$response = '';
 				if(@fwrite($socket, $out) !== FALSE) {
 					stream_set_timeout($socket, 5);
-					$response = stream_get_contents($socket);
+					$response = stream_get_contents($socket, 4096);
 				}
 				fclose($socket);
 				$pos = strpos($response, "\r\n\r\n");
@@ -221,12 +231,14 @@
 		// Output Hosts
 		$count = 0;
 		$lines = file_exists(HOST_PATH) ? file(HOST_PATH) : array();
+		shuffle($lines);
 		foreach($lines as $line) {
 			list($ip, $time) = explode('|', $line);
 			$age = $now - $time;
 			if($age < MAX_HOST_AGE) {
 				echo "H|$ip|$age\n";
 				++$count;
+				if($count >= HOST_OUTPUT) { break; }
 			}
 		}
 		if(!$count) { echo "I|NO-HOSTS\n"; }
@@ -234,12 +246,14 @@
 		// Output URLs
 		$count = 0;
 		$lines = file_exists(URL_PATH) ? file(URL_PATH) : array();
+		shuffle($lines);
 		foreach($lines as $line) {
 			list($url, $time, $status) = explode('|', $line);
 			$age = $time > 0 ? $now - $time : 3600;
 			if($age < MAX_URL_AGE && $status === 'OK') {
 				echo "U|$url|$age\n";
 				++$count;
+				if($count >= URL_OUTPUT) { break; }
 			}
 		}
 		if(!$count) { echo "I|NO-URLS\n"; }
