@@ -77,7 +77,7 @@
 	}
 
 	// Pong!
-	if($ping) { echo "I|pong|Cachechu R12|gnutella2\n"; }
+	if($ping) { echo "I|pong|Cachechu R13|gnutella2\n"; }
 
 	// Add host to cache
 	if($update && $host) {
@@ -140,7 +140,6 @@
 			if($xurl !== FALSE) {
 				$urls[$xurl] = array('time' => $time, 'status' => $status, 'ip' => $ip);
 				if($time === 0 || $now - $time >= MAX_URL_AGE) {
-					echo "$xurl|AGE|", $now - $time;
 					$test_urls[$xurl] = $status; // Test old URLs
 				}
 			}
