@@ -77,7 +77,7 @@
 	}
 
 	// Pong!
-	if($ping) { echo "I|pong|Cachechu R13|gnutella2\n"; }
+	if($ping) { echo "I|pong|Cachechu R14|gnutella2\n"; }
 
 	// Add host to cache
 	if($update && $host) {
