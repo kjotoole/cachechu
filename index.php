@@ -13,6 +13,16 @@
 	//
 	// You should have received a copy of the GNU General Public License
 	// along with this program.  If not, see <http://www.gnu.org/licenses/>.
+	
+	function get_url($url) {
+		$url = urldecode(rtrim(preg_replace(INDEX_REGEX, '', $url), '/'));
+		if(strpos($url, 'nyud.net') === FALSE && preg_match(URL_REGEX, $url, $match)) {
+			if(!isset($match['file'])) { $url .= '/'; }
+			return $url;
+		} else {
+			return FALSE;
+		}
+	}
 
 	define('HOST_PATH', 'data/hosts.dat');
 	define('URL_PATH', 'data/urls.dat');
@@ -20,8 +30,9 @@
 	define('HOST_LIMIT', 50); // Store 50 hosts,
 	define('HOST_OUTPUT', 30); // Output at most 30 hosts
 	define('URL_OUTPUT', 15); // Output at most 15 URLs
-	define('MAX_HOST_AGE', 10800); // 3 hours
+	define('MAX_HOST_AGE', 25200); // 7 hours
 	define('MAX_URL_AGE', 86400); // 24 hours
+	define('URL_DISPLAY_AGE', 604800); // 1 week
 	define('BAN_TIME', 3600); // 1 hour
 	define('ADVERTISE', FALSE);
 
@@ -41,8 +52,8 @@
 			header('HTTP/1.0 404 Not Found');
 			die("ERROR: Network Not Supported\n");
 		}
-	} else if(file_exists('index.html')) {
-		require('index.html');
+	} else if(file_exists('main.html')) {
+		require('main.html');
 	} else {
 		header('Content-Type: text/plain');
 	}
@@ -66,7 +77,7 @@
 	}
 
 	// Pong!
-	if($ping) { echo "I|pong|Cachechu R10|gnutella2\n";	}
+	if($ping) { echo "I|pong|Cachechu R11|gnutella2\n"; }
 
 	// Add host to cache
 	if($update && $host) {
@@ -89,7 +100,7 @@
 			// Add new host to hosts file and do a little cleanup of the file
 			$new_lines = array();
 			$lines = file_exists(HOST_PATH) ? file(HOST_PATH) : array();
-			$client = ereg_replace('[\\r\\n\\|]', '', $_SERVER['HTTP_USER_AGENT']); //  Don't want no problems in host file
+			$client = preg_replace('/\\r\\n\\|/', '', $_SERVER['HTTP_USER_AGENT']); //  Don't want no problems in host file
 			$lines[] = "$host|" . $now . "|$client|\n";
 			foreach($lines as $line) {
 				list($ip, $time, $client) = explode('|', $line);
@@ -118,19 +129,18 @@
 	if($update && $url) {
 		define('OUTPUT_REGEX', '%\\A(?:(?:H\\|(?:[0-9]{1,3}\\.){3}[0-9]{1,3}.*)|(?:U\\|http://.+)|(?:[A-GI-TV-Z]\\|.*))\\z%i');
 		define('URL_REGEX', '/\\Ahttp:\/\/(?P<domain>[-A-Z0-9.]+)(?::(?P<port>[0-9]+))?(?P<file>\/[-A-Z0-9+&@#\/%=~_|!:,.;]*)?\\z/i');
-		// Makes it easier to detect duplicates if index page is removed
-		$url = preg_replace('/(?:default|index)\\.(?:aspx?|cfm|cgi|htm|html|jsp|php)$/iD', '', $url);
-		$url = rtrim($url, '/'); // Trims slashes to avoid duplicates
-		$url = urldecode($url); // URLs must be stored in file unescaped
+		define('INDEX_REGEX', '/(?:default|index)\\.(?:aspx?|cfm|cgi|htm|html|jsp|php)$/iD');
 		$test_urls = array();
 		$urls = array();
 		$lines = file_exists(URL_PATH) ? file(URL_PATH) : array();
 		shuffle($lines); // Used to randomize URL testing
 		foreach($lines as $line) {
 			list($xurl, $time, $status, $ip) = explode('|', trim($line));
-			if($xurl) {
+			$xurl = get_url($xurl);
+			if($xurl !== FALSE) {
 				$urls[$xurl] = array('time' => $time, 'status' => $status, 'ip' => $ip);
 				if($time === 0 || $now - $time >= MAX_URL_AGE) {
+					echo "$xurl|AGE|", $now - $time;
 					$test_urls[$xurl] = $status; // Test old URLs
 				}
 			}
@@ -140,7 +150,8 @@
 		arsort($test_urls);
 
 		// Add submitted GWebCache, do not allow Coral Cache URLs and only add new URL
-		if(strpos($url, 'nyud.net') === FALSE && preg_match(URL_REGEX, $url) && !isset($urls[$url])) {
+		$url = get_url($url);
+		if($url !== FALSE && !isset($urls[$url])) {
 			$urls[$url] = array('time' => 0, 'status' => 'NEW', 'ip' => '');
 			$test_urls[$url] = 'NEW';
 		}
@@ -149,19 +160,19 @@
 		$test_url = key($test_urls); // First URL
 		$test_ip = '';
 		$test_status = '';
-		if(preg_match(URL_REGEX, $test_url, $matches)) {
+		if(preg_match(URL_REGEX, $test_url, $match)) {
 			$error = NULL;
-			$domain = $matches['domain'];
+			$domain = $match['domain'];
 			$ip = gethostbyname($domain);
 			$socket = NULL;
 			if($ip != $domain) { // If gethostbyname fails, it will return the tested domain
 				$error = TRUE;
-				$port = isset($matches['port']) && $matches['port'] ? $matches['port'] : 80;
+				$port = isset($match['port']) && $match['port'] ? $match['port'] : 80;
 				ini_set('user_agent', 'Cachechu');
 				$socket = @fsockopen($domain, $port, $errno, $errstr, 5);
 			}
 			if($socket) {			
-				$file = isset($matches['file']) ? $matches['file'] : '/'; // No need to URL encode
+				$file = isset($match['file']) ? $match['file'] : '/'; // No need to URL encode
 				$query = "$file?get=1&net=gnutella2&client=TEST&version=Cachechu";
 				if(ADVERTISE) {
 					$current_url = 'http://' . $_SERVER['SERVER_NAME'];
@@ -175,7 +186,7 @@
 				$response = '';
 				if(@fwrite($socket, $out) !== FALSE) {
 					stream_set_timeout($socket, 5);
-					$response = stream_get_contents($socket, 4096);
+					$response = stream_get_contents($socket, 16384);
 				}
 				fclose($socket);
 				$pos = strpos($response, "\r\n\r\n");
@@ -250,7 +261,7 @@
 		foreach($lines as $line) {
 			list($url, $time, $status) = explode('|', $line);
 			$age = $time > 0 ? $now - $time : 3600;
-			if($age < MAX_URL_AGE && $status === 'OK') {
+			if($age < URL_DISPLAY_AGE && $status === 'OK') {
 				echo "U|$url|$age\n";
 				++$count;
 				if($count >= URL_OUTPUT) { break; }
@@ -258,7 +269,6 @@
 		}
 		if(!$count) { echo "I|NO-URLS\n"; }
 	}
-
-	// Must output something if no requests cause output
-	if(!ob_get_contents()) { echo "I|something\n"; }
+	
+	if(!empty($_GET)) { echo "I|access|period|1200\n"; }
 ?>
