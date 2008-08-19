@@ -34,9 +34,9 @@
 	$config['URL']['TestAge'] = isset($config['URL']['TestAge']) ? $config['URL']['TestAge'] : 86400;
 	$config['Cache']['Advertise'] = isset($config['Cache']['Advertise']) ? $config['Cache']['Advertise'] : 0;
 	$config['Cache']['BanTime'] = isset($config['Cache']['BanTime']) ? $config['Cache']['BanTime'] : 3600;
-	$config['Path']['Ban'] = isset($config['Cache']['Ban']) ? $config['Cache']['Ban'] : 'data/bans.dat';
+	$config['Path']['Ban'] = isset($config['Path']['Ban']) ? $config['Path']['Ban'] : 'data/bans.dat';
 	$config['Path']['Host'] = isset($config['Path']['Host']) ? $config['Path']['Host'] : 'data/hosts.dat';
-	$config['Path']['URL'] = isset($config['Cache']['URL']) ? $config['Cache']['URL'] : 'data/urls.dat';
+	$config['Path']['URL'] = isset($config['Path']['URL']) ? $config['Path']['URL'] : 'data/urls.dat';
 
 	$remote_ip = $_SERVER['REMOTE_ADDR'];
 	$now       = time();
@@ -79,7 +79,7 @@
 	}
 
 	// Pong!
-	if($ping) { echo "I|pong|Cachechu R16|gnutella2\n"; }
+	if($ping) { echo "I|pong|Cachechu R17|gnutella2\n"; }
 
 	// Add host to cache
 	if($update && $host) {
