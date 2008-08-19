@@ -79,7 +79,7 @@
 	}
 
 	// Pong!
-	if($ping) { echo "I|pong|Cachechu R17|gnutella2\n"; }
+	if($ping) { echo "I|pong|Cachechu R18|gnutella2\n"; }
 
 	// Add host to cache
 	if($update && $host) {
@@ -129,9 +129,10 @@
 	}
 
 	if($update && $url) {
-		define('OUTPUT_REGEX', '%\\A(?:(?:H\\|(?:[0-9]{1,3}\\.){3}[0-9]{1,3}.*)|(?:U\\|http://.+)|(?:[A-GI-TV-Z]\\|.*))\\z%i');
+		define('OUTPUT_REGEX', '%\\A(?:(?:(?:H\\|(?:[0-9]{1,3}\\.){3}[0-9]{1,3}.*)\\|(\\d+).*|(?:U\\|http://.+)|(?:[A-GI-TV-Z]\\|.*)))\\z%i');
 		define('URL_REGEX', '/\\Ahttp:\/\/(?P<domain>[-A-Z0-9.]+)(?::(?P<port>[0-9]+))?(?P<file>\/[-A-Z0-9+&@#\/%=~_|!:,.;]*)?\\z/i');
 		define('INDEX_REGEX', '/(?:default|index)\\.(?:aspx?|cfm|cgi|htm|html|jsp|php)$/iD');
+		define('MAX_AGE', 2419200); // If any hosts are older than 28 days, the cache is marked as BAD
 		$test_urls = array();
 		$urls = array();
 		$lines = file_exists($config['Path']['URL']) ? file($config['Path']['URL']) : array();
@@ -187,25 +188,26 @@
 				$response = '';
 				if(@fwrite($socket, $out) !== FALSE) {
 					stream_set_timeout($socket, 5);
-					$response = stream_get_contents($socket, 16384);
+					while (!feof($socket) && !$info['timed_out']) {
+						$response .= fgets($socket, 4096);
+						$info = stream_get_meta_data($socket);
+					}
 				}
 				fclose($socket);
 				$pos = strpos($response, "\r\n\r\n");
 				if($pos !== FALSE) {
 					$contents = trim(substr($response, $pos + 4));
-					if($contents) {
-						$error = FALSE;
-					}
+					if($contents) { $error = FALSE; }
 					$lines = explode("\n", $contents);
 					foreach($lines as $line) {
-						if(!preg_match(OUTPUT_REGEX, $line)) {
-							$error = TRUE; // Contains invalid output
+						if(!preg_match(OUTPUT_REGEX, $line, $match) || isset($match[1]) && $match[1] > MAX_AGE) {
+							$error = TRUE; // Contains invalid output or ancient hosts
 							break;
 						}
 					}
 				}
 			}
-			if(is_null($error) || ($error && !$urls[$test_url]['status'])) {
+			if(is_null($error) || ($error && $urls[$test_url]['status'] === 'BAD')) {
 				unset($urls[$test_url]); // Remove from cache after testing BAD a 2nd time, or no IP
 			} else {
 				$urls[$test_url]['time'] = $now;
