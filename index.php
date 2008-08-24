@@ -37,10 +37,12 @@
 	$config['Path']['Ban'] = isset($config['Path']['Ban']) ? $config['Path']['Ban'] : 'data/bans.dat';
 	$config['Path']['Host'] = isset($config['Path']['Host']) ? $config['Path']['Host'] : 'data/hosts.dat';
 	$config['Path']['URL'] = isset($config['Path']['URL']) ? $config['Path']['URL'] : 'data/urls.dat';
+	$config['Path']['Stats'] = isset($config['Path']['Stats']) ? $config['Path']['Stats'] : 'data/stats.ini';
 
 	$remote_ip = $_SERVER['REMOTE_ADDR'];
 	$now       = time();
-	$client    = isset($_GET['client']) ? $_GET['client'] : '';
+	$client    = isset($_SERVER['HTTP_USER_AGENT']) ? $_SERVER['HTTP_USER_AGENT'] : '';
+	$client    = preg_replace('/[\\r\\n|[\\]=;()]/', '', substr($client, 0, 40)); // Sanitize
 	$get       = isset($_GET['get']) ? $_GET['get'] : '';
 	$host      = isset($_GET['ip']) ? $_GET['ip'] : '';
 	$net       = isset($_GET['net']) ? $_GET['net'] : '';
@@ -54,6 +56,21 @@
 			header('HTTP/1.0 404 Not Found');
 			die("ERROR: Network Not Supported\n");
 		}
+		if(file_exists($config['Path']['Stats'])) { // Log stats
+			$stats = @parse_ini_file($config['Path']['Stats'], TRUE);
+			if(!isset($stats['Time']['Start'])) { $stats['Time']['Start'] = $now; }
+			if($get) { $stats['Get'][$client] = isset($stats['Get'][$client]) ? $stats['Get'][$client] + 1 : 1; }
+			if($update) { $stats['Update'][$client] = isset($stats['Update'][$client]) ? $stats['Update'][$client] + 1 : 1; }
+			if($ping) { $stats['Ping'][$client] = isset($stats['Ping'][$client]) ? $stats['Ping'][$client] + 1 : 1; }
+			$output = '';
+			foreach($stats as $section => $keys) {
+				$output .= "[$section]\r\n";
+				foreach($keys as $key => $value) {
+					$output .= "$key=$value\r\n";
+				}
+			}
+			@file_put_contents($config['Path']['Stats'], $output, LOCK_EX);
+		}
 	} else if(file_exists('main.html')) {
 		require('main.html');
 	} else {
@@ -66,20 +83,19 @@
 		if($bans == FALSE) { $bans = array(); } // File could not be unserialized
 		if(isset($bans[$remote_ip]) && $now - $bans[$remote_ip] <= $config['Cache']['BanTime']) {
 			die("ERROR: Client returned too early\n");
-		} else {
-			foreach($bans as $ip => $time) {
-				if($now - $time > $config['Cache']['BanTime']) {
-					unset($bans[$ip]); // Remove old banned hosts
-				}
-			}
-			$bans[$remote_ip] = $now; // Add current IP to banned list
-			@file_put_contents($config['Path']['Ban'], serialize($bans));
-			echo "I|update|period|", $config['Cache']['BanTime'], "\n";
 		}
+		foreach($bans as $ip => $time) {
+			if($now - $time > $config['Cache']['BanTime']) {
+				unset($bans[$ip]); // Remove old banned hosts
+			}
+		}
+		$bans[$remote_ip] = $now; // Add current IP to banned list
+		@file_put_contents($config['Path']['Ban'], serialize($bans));
+		echo "I|update|period|", $config['Cache']['BanTime'], "\n";
 	}
 
 	// Pong!
-	if($ping) { echo "I|pong|Cachechu R18|gnutella2\n"; }
+	if($ping) { echo "I|pong|Cachechu R19|gnutella2\n"; }
 
 	// Add host to cache
 	if($update && $host) {
@@ -102,8 +118,7 @@
 			// Add new host to hosts file and do a little cleanup of the file
 			$new_lines = array();
 			$lines = file_exists($config['Path']['Host']) ? file($config['Path']['Host']) : array();
-			$client = preg_replace('/\\r\\n\\|/', '', $_SERVER['HTTP_USER_AGENT']); //  Don't want no problems in host file
-			$lines[] = "$host|" . $now . "|$client|\n";
+			$lines[] = "$host|$now|$client|\n";
 			foreach($lines as $line) {
 				list($ip, $time, $client) = explode('|', $line);
 				$age = $now - $time;
@@ -132,7 +147,7 @@
 		define('OUTPUT_REGEX', '%\\A(?:(?:(?:H\\|(?:[0-9]{1,3}\\.){3}[0-9]{1,3}.*)\\|(\\d+).*|(?:U\\|http://.+)|(?:[A-GI-TV-Z]\\|.*)))\\z%i');
 		define('URL_REGEX', '/\\Ahttp:\/\/(?P<domain>[-A-Z0-9.]+)(?::(?P<port>[0-9]+))?(?P<file>\/[-A-Z0-9+&@#\/%=~_|!:,.;]*)?\\z/i');
 		define('INDEX_REGEX', '/(?:default|index)\\.(?:aspx?|cfm|cgi|htm|html|jsp|php)$/iD');
-		define('MAX_AGE', 2419200); // If any hosts are older than 28 days, the cache is marked as BAD
+		define('MAX_AGE', 259200); // If any hosts are older than 3 days, the cache is marked as BAD
 		$test_urls = array();
 		$urls = array();
 		$lines = file_exists($config['Path']['URL']) ? file($config['Path']['URL']) : array();
@@ -173,13 +188,13 @@
 				ini_set('user_agent', 'Cachechu');
 				$socket = @fsockopen($domain, $port, $errno, $errstr, 5);
 			}
-			if($socket) {			
+			if($socket) {
 				$file = isset($match['file']) ? $match['file'] : '/'; // No need to URL encode
 				$query = "$file?get=1&net=gnutella2&client=TEST&version=Cachechu";
 				if($config['Cache']['Advertise']) {
 					$current_url = 'http://' . $_SERVER['SERVER_NAME'];
 					if($_SERVER['SERVER_PORT'] != 80) { $current_url .= ':' . $_SERVER['SERVER_PORT']; }
-					$current_url .= rtrim(str_replace('index.php', '', $_SERVER['PHP_SELF']), '/');
+					$current_url = get_url($current_url . $_SERVER['PHP_SELF']);
 					$query .= '&update=1&url=' . urlencode($current_url);
 				}
 				$out = "GET $query HTTP/1.0\r\n";
@@ -188,6 +203,7 @@
 				$response = '';
 				if(@fwrite($socket, $out) !== FALSE) {
 					stream_set_timeout($socket, 5);
+					$info = stream_get_meta_data($socket);
 					while (!feof($socket) && !$info['timed_out']) {
 						$response .= fgets($socket, 4096);
 						$info = stream_get_meta_data($socket);
@@ -234,7 +250,7 @@
 				$output .= "$xurl|$time|$status|$ip|\r\n";
 			}
 		}
-		
+
 		// Save URL files and ignore concurrency issues
 		@file_put_contents($config['Path']['URL'], $output, LOCK_EX);
 		// Output update notice (returns OK on untested URLs)
@@ -272,6 +288,6 @@
 		}
 		if(!$count) { echo "I|NO-URLS\n"; }
 	}
-	
+
 	if(!empty($_GET)) { echo "I|access|period|1800\n"; }
 ?>
