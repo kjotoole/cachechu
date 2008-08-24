@@ -11,10 +11,11 @@ I. Description
 II. File List
 
     o   index.php         - Cachechu PHP code
-    o   readme.txt        - this file
     o   main.html         - Web interface
     o   data/urls.dat     - default list of URLs
+    o   data/stats.ini    - enables stats
     o   config/config.ini - default config file
+    o   readme.txt        - this file
 
 III. Requirements
 
@@ -27,6 +28,10 @@ III. Requirements
     2.  The following file should be set as the directory index:
 
       index.php
+
+    2.  To enable stat logging, the following file should exist:
+
+      data/stats.ini
 
 IV. Web interface
 
