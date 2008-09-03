@@ -24,15 +24,16 @@
 		}
 	}
 
+	define('VERSION', 'R20');
 	define('CONFIG_PATH', 'config/config.ini');
 	$config = file_exists(CONFIG_PATH) ? @parse_ini_file(CONFIG_PATH, TRUE) : array();
-	$config['Host']['Age'] = isset($config['Host']['Age']) ? $config['Host']['Age'] : 25200;
+	$config['Host']['Age'] = isset($config['Host']['Age']) ? $config['Host']['Age'] : 46800;
 	$config['Host']['Output'] = isset($config['Host']['Output']) ? $config['Host']['Output'] : 30;
 	$config['Host']['Store'] = isset($config['Host']['Store']) ? $config['Host']['Store'] : 50;
 	$config['URL']['Age'] = isset($config['URL']['Age']) ? $config['URL']['Age'] : 604800;
 	$config['URL']['Output'] = isset($config['URL']['Output']) ? $config['URL']['Output'] : 15;
 	$config['URL']['TestAge'] = isset($config['URL']['TestAge']) ? $config['URL']['TestAge'] : 86400;
-	$config['Cache']['Advertise'] = isset($config['Cache']['Advertise']) ? $config['Cache']['Advertise'] : 0;
+	$config['Cache']['Advertise'] = isset($config['Cache']['Advertise']) ? $config['Cache']['Advertise'] : 1;
 	$config['Cache']['BanTime'] = isset($config['Cache']['BanTime']) ? $config['Cache']['BanTime'] : 3600;
 	$config['Path']['Ban'] = isset($config['Path']['Ban']) ? $config['Path']['Ban'] : 'data/bans.dat';
 	$config['Path']['Host'] = isset($config['Path']['Host']) ? $config['Path']['Host'] : 'data/hosts.dat';
@@ -42,7 +43,7 @@
 	$remote_ip = $_SERVER['REMOTE_ADDR'];
 	$now       = time();
 	$client    = isset($_SERVER['HTTP_USER_AGENT']) ? $_SERVER['HTTP_USER_AGENT'] : '';
-	$client    = preg_replace('/[\\r\\n|[\\]=;()]/', '', substr($client, 0, 40)); // Sanitize
+	$client    = preg_replace('/[\r\n;={}|&~![()]/', '', substr($client, 0, 40)); // Sanitize
 	$get       = isset($_GET['get']) ? $_GET['get'] : '';
 	$host      = isset($_GET['ip']) ? $_GET['ip'] : '';
 	$net       = isset($_GET['net']) ? $_GET['net'] : '';
@@ -57,6 +58,8 @@
 			die("ERROR: Network Not Supported\n");
 		}
 		if(file_exists($config['Path']['Stats'])) { // Log stats
+			$client = preg_replace('/\\Anull|yes|no|true|false\\z/i', '', $client);
+			if($client == '') { $client = 'Invalid'; }
 			$stats = @parse_ini_file($config['Path']['Stats'], TRUE);
 			if(!isset($stats['Time']['Start'])) { $stats['Time']['Start'] = $now; }
 			if($get) { $stats['Get'][$client] = isset($stats['Get'][$client]) ? $stats['Get'][$client] + 1 : 1; }
@@ -71,8 +74,8 @@
 			}
 			@file_put_contents($config['Path']['Stats'], $output, LOCK_EX);
 		}
-	} else if(file_exists('main.html')) {
-		require('main.html');
+	} else if(file_exists('main.php')) {
+		require('main.php');
 	} else {
 		header('Content-Type: text/plain');
 	}
@@ -95,7 +98,7 @@
 	}
 
 	// Pong!
-	if($ping) { echo "I|pong|Cachechu R19|gnutella2\n"; }
+	if($ping) { echo 'I|pong|Cachechu ', VERSION, "|gnutella2\n"; }
 
 	// Add host to cache
 	if($update && $host) {

@@ -1,14 +1,16 @@
+; Remove .sample from file to use
+
 [Cache]
-Advertise = 0 ; If non-zero, will advertise cache to other caches [default 0]
+Advertise = 1 ; If non-zero, will advertise cache to other caches [default 1]
 BanTime   = 3600 ; Amount of time to ban hosts after one update [default 1 hour]
 
 [URL]
 Age       = 604800 ; Max age to display a URL [default 1 week]
-Output    = 15 ; Max URLs to output [default 15]
+Output    = 30 ; Max URLs to output [default 30]
 TestAge   = 86400 ; Min age to test a URL [default 1 day]
 
 [Host]
-Age       = 25200 ; Max age to keep in cache [default 7 hours]
+Age       = 46800 ; Max age to keep in cache [default 13 hours]
 Output    = 30 ; Max hosts to output [default 30]
 Store     = 50 ; Max hosts to store [default 50]
 
