@@ -11,7 +11,7 @@ I. Description
 II. File List
 
     o   index.php         - Cachechu PHP code
-    o   main.html         - Web interface
+    o   main.php          - Web interface
     o   data/urls.dat     - default list of URLs
     o   data/stats.ini    - enables stats
     o   config/config.ini - default config file
