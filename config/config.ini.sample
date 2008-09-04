@@ -10,7 +10,7 @@ Output    = 30 ; Max URLs to output [default 30]
 TestAge   = 86400 ; Min age to test a URL [default 1 day]
 
 [Host]
-Age       = 46800 ; Max age to keep in cache [default 13 hours]
+Age       = 28800 ; Max age to keep in cache [default 8 hours]
 Output    = 30 ; Max hosts to output [default 30]
 Store     = 50 ; Max hosts to store [default 50]
 

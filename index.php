@@ -24,10 +24,10 @@
 		}
 	}
 
-	define('VERSION', 'R20');
+	define('VERSION', 'R21');
 	define('CONFIG_PATH', 'config/config.ini');
 	$config = file_exists(CONFIG_PATH) ? @parse_ini_file(CONFIG_PATH, TRUE) : array();
-	$config['Host']['Age'] = isset($config['Host']['Age']) ? $config['Host']['Age'] : 46800;
+	$config['Host']['Age'] = isset($config['Host']['Age']) ? $config['Host']['Age'] : 28800;
 	$config['Host']['Output'] = isset($config['Host']['Output']) ? $config['Host']['Output'] : 30;
 	$config['Host']['Store'] = isset($config['Host']['Store']) ? $config['Host']['Store'] : 50;
 	$config['URL']['Age'] = isset($config['URL']['Age']) ? $config['URL']['Age'] : 604800;
@@ -43,7 +43,7 @@
 	$remote_ip = $_SERVER['REMOTE_ADDR'];
 	$now       = time();
 	$client    = isset($_SERVER['HTTP_USER_AGENT']) ? $_SERVER['HTTP_USER_AGENT'] : '';
-	$client    = preg_replace('/[\r\n;={}|&~![()]/', '', substr($client, 0, 40)); // Sanitize
+	$client    = preg_replace('%[^\\w/\\\\. ]%i', '', substr($client, 0, 40)); // Sanitize
 	$get       = isset($_GET['get']) ? $_GET['get'] : '';
 	$host      = isset($_GET['ip']) ? $_GET['ip'] : '';
 	$net       = isset($_GET['net']) ? $_GET['net'] : '';
@@ -59,7 +59,7 @@
 		}
 		if(file_exists($config['Path']['Stats'])) { // Log stats
 			$client = preg_replace('/\\Anull|yes|no|true|false\\z/i', '', $client);
-			if($client == '') { $client = 'Invalid'; }
+			if($client == '') { $client = 'Unknown'; }
 			$stats = @parse_ini_file($config['Path']['Stats'], TRUE);
 			if(!isset($stats['Time']['Start'])) { $stats['Time']['Start'] = $now; }
 			if($get) { $stats['Get'][$client] = isset($stats['Get'][$client]) ? $stats['Get'][$client] + 1 : 1; }
