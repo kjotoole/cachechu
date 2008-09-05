@@ -10,12 +10,12 @@ I. Description
 
 II. File List
 
-    o   index.php         - Cachechu PHP code
-    o   main.php          - Web interface
-    o   data/urls.dat     - default list of URLs
-    o   data/stats.ini    - enables stats
-    o   config/config.ini - default config file
-    o   readme.txt        - this file
+    o   index.php                - Cachechu PHP code
+    o   main.php                 - Web interface
+    o   data/urls.dat.sample     - default list of URLs (remove .sample to use)
+    o   data/stats.ini.sample    - enables stats (remove .sample to use)
+    o   config/config.ini.sample - default config file (remove .sample to use)
+    o   readme.txt               - this file
 
 III. Requirements
 
