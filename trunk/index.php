@@ -24,7 +24,7 @@
 		}
 	}
 
-	define('VERSION', 'R22');
+	define('VERSION', '1.0');
 	define('CONFIG_PATH', 'config/config.ini');
 	$config = file_exists(CONFIG_PATH) ? @parse_ini_file(CONFIG_PATH, TRUE) : array();
 	$config['Host']['Age'] = isset($config['Host']['Age']) ? $config['Host']['Age'] : 28800;
@@ -61,18 +61,22 @@
 			$client = preg_replace('/\\Anull|yes|no|true|false\\z/i', '', $client);
 			if($client == '') { $client = 'Unknown'; }
 			$stats = @parse_ini_file($config['Path']['Stats'], TRUE);
-			if(!isset($stats['Time']['Start'])) { $stats['Time']['Start'] = $now; }
-			if($get) { $stats['Get'][$client] = isset($stats['Get'][$client]) ? $stats['Get'][$client] + 1 : 1; }
-			if($update) { $stats['Update'][$client] = isset($stats['Update'][$client]) ? $stats['Update'][$client] + 1 : 1; }
-			if($ping) { $stats['Ping'][$client] = isset($stats['Ping'][$client]) ? $stats['Ping'][$client] + 1 : 1; }
-			$output = '';
-			foreach($stats as $section => $keys) {
-				$output .= "[$section]\r\n";
-				foreach($keys as $key => $value) {
-					$output .= "$key=$value\r\n";
+			if(is_null(error_get_last())) {
+				if(!isset($stats['Time']['Start'])) { $stats['Time']['Start'] = $now; }
+				if($get) { $stats['Get'][$client] = isset($stats['Get'][$client]) ? $stats['Get'][$client] + 1 : 1; }
+				if($update) { $stats['Update'][$client] = isset($stats['Update'][$client]) ? $stats['Update'][$client] + 1 : 1; }
+				if($ping) { $stats['Ping'][$client] = isset($stats['Ping'][$client]) ? $stats['Ping'][$client] + 1 : 1; }
+				$output = '';
+				foreach($stats as $section => $keys) {
+					$output .= "[$section]\r\n";
+					foreach($keys as $key => $value) {
+						$output .= "$key=$value\r\n";
+					}
 				}
+				@file_put_contents($config['Path']['Stats'], $output, LOCK_EX);
+			} else {
+				echo "I|The stats file could not be read.\n";
 			}
-			@file_put_contents($config['Path']['Stats'], $output, LOCK_EX);
 		}
 	} else if(file_exists('main.php')) {
 		require('main.php');
