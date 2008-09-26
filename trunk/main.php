@@ -30,7 +30,7 @@
 			title="Cachechu Projects Page">Cachechu Gnutella2 GWebCache</a>
 	</h1>
 
-	<form method="get" action=".">
+	<form method="get" action="<?php echo $_SERVER['PHP_SELF'] ?>">
 		<div>
 			<input type="hidden" name="net" value="gnutella2">
 			<input type="hidden" name="ping" value="1">
