@@ -24,12 +24,13 @@
 		}
 	}
 
-	define('VERSION', '1.0');
+	define('VERSION', 'R27');
 	define('CONFIG_PATH', 'config/config.ini');
 	$config = file_exists(CONFIG_PATH) ? @parse_ini_file(CONFIG_PATH, TRUE) : array();
 	$config['Host']['Age'] = isset($config['Host']['Age']) ? $config['Host']['Age'] : 28800;
 	$config['Host']['Output'] = isset($config['Host']['Output']) ? $config['Host']['Output'] : 30;
 	$config['Host']['Store'] = isset($config['Host']['Store']) ? $config['Host']['Store'] : 50;
+	$config['Host']['Testing'] = isset($config['Host']['Testing']) ? $config['Host']['Testing'] : 1;
 	$config['URL']['Age'] = isset($config['URL']['Age']) ? $config['URL']['Age'] : 604800;
 	$config['URL']['Output'] = isset($config['URL']['Output']) ? $config['URL']['Output'] : 30;
 	$config['URL']['TestAge'] = isset($config['URL']['TestAge']) ? $config['URL']['TestAge'] : 86400;
@@ -109,16 +110,20 @@
 		define('IP_REGEX', '/\\A((?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)):(\\d+)\\z/');
 		$error = TRUE;
 		if(strpos($host, $remote_ip) !== FALSE && preg_match(IP_REGEX, $host)) {
-			list($ip, $port) = explode(':', $host);
-			$socket = @fsockopen($ip, $port,  $errno, $errstr, 5);
-			if($socket) {
-				if(@fwrite($socket, "GNUTELLA CONNECT/0.6\r\n\r\n") !== FALSE) {
-					stream_set_timeout($socket, 5);
-					if(stream_get_contents($socket, 12) === 'GNUTELLA/0.6') {
-						$error = FALSE;
+			if($config['Host']['Testing']) {
+				list($ip, $port) = explode(':', $host);
+				$socket = @fsockopen($ip, $port, $errno, $errstr, 5);
+				if($socket) {
+					if(@fwrite($socket, "GNUTELLA CONNECT/0.6\r\n\r\n") !== FALSE) {
+						stream_set_timeout($socket, 5);
+						if(stream_get_contents($socket, 12) === 'GNUTELLA/0.6') {
+							$error = FALSE;
+						}
 					}
+					fclose($socket);
 				}
-				fclose($socket);
+			} else {
+				$error = FALSE;
 			}
 		}
 		if(!$error) {

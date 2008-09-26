@@ -13,6 +13,7 @@ TestAge   = 86400 ; Min age to test a URL [default 1 day]
 Age       = 28800 ; Max age to keep in cache [default 8 hours]
 Output    = 30 ; Max hosts to output [default 30]
 Store     = 50 ; Max hosts to store [default 50]
+Testing   = 1 ; If the server can only test port 80, set this option to 0 [default 1]
 
 [Path]
 Ban       = data/bans.dat
