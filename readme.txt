@@ -19,7 +19,7 @@ II. File List
 
 III. Requirements
 
-    1.  The following paths require write access:
+    1.  The following paths require write (and read) access:
     
       data/bans.dat
       data/hosts.dat
@@ -29,13 +29,16 @@ III. Requirements
 
       index.php
 
-    2.  To enable stat logging, the following file should exist:
+    3.  To enable stat logging, the following file should exist:
 
       data/stats.ini
 
+    4.  If your host cannot test clients on a port other than 80,
+        set [Host] Testing in config.ini to 0.
+
 IV. Web interface
 
-    1.  'Ping and Get' outputs a 'get' and 'ping' GWebCache request.
+    1.  'Test Cache' outputs a 'get' and 'ping' GWebCache request.
 
     2.  'Update' performs a URL 'update' GWebCache request with the URL entered.
 
