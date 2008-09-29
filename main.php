@@ -49,12 +49,18 @@
 		</div>
 	</form>
 
-	<?php if(file_exists($config['Path']['Stats'])):
-		$stats = @parse_ini_file($config['Path']['Stats'], TRUE);
-		$gets = isset($stats['Get']) ? array_sum($stats['Get']) : 0;
-		$updates = isset($stats['Update']) ? array_sum($stats['Update']) : 0;
-		$pings = isset($stats['Ping']) ? array_sum($stats['Ping']) : 0;
-		$hour = isset($stats['Time']['Start']) ? ($now - $stats['Time']['Start']) / 60 / 60 : 1;
+	<?php if(file_exists($config['Path']['Stats']) && file_exists($config['Path']['StartTime'])):
+		$start_time = file_get_contents($config['Path']['StartTime']);
+		$lines = file($config['Path']['Stats']);
+		$stats['G'] = array();
+		$stats['U'] = array();
+		foreach($lines as $line) {
+			list($action, $vendor, $count) = explode('|', $line);
+			$stats[$action][$vendor] = $count;
+		}
+		$gets = isset($stats['G']) ? array_sum($stats['G']) : 0;
+		$updates = isset($stats['U']) ? array_sum($stats['U']) : 0;
+		$hour = ($now - $start_time) / 60 / 60;
 		if($hour == 0) { $hour = 1; }
 	?>
 	<table>
@@ -64,7 +70,6 @@
 				<th></th>
 				<th>Get</th>
 				<th>Update</th>
-				<th>Ping</th>
 			</tr>
 		</thead>
 		<tbody>
@@ -72,32 +77,32 @@
 				<th>Total:</th>
 				<td><?php echo $gets; ?></td>
 				<td><?php echo $updates; ?></td>
-				<td><?php echo $pings; ?></td>
 			</tr>
 			<tr class="even">
 				<th>Hourly:</th>
 				<td><?php echo round($gets / $hour, 1); ?></td>
 				<td><?php echo round($updates / $hour, 1); ?></td>
-				<td><?php echo round($pings / $hour, 1); ?></td>
 			</tr>
 			<tr class="caption">
-				<th colspan="4">Top 10</th>
+				<th colspan="3">Top 10 (Since
+				<?php
+					date_default_timezone_set('UTC');
+					echo date('Y-m-d G:i:s', $start_time), 'Z'; ?>
+				)</th>
 			</tr>
 			<?php
 				$count = 0;
-				$gets = is_array($stats['Get']) ? $stats['Get'] : array();
+				$gets = is_array($stats['G']) ? $stats['G'] : array();
 				natsort($gets);
 				$gets = array_reverse($gets, TRUE);
 				$gets = array_slice($gets, 0, 10, TRUE);
 				foreach($gets as $vendor => $get_count) {
-					$update_count = isset($stats['Update'][$vendor]) ? $stats['Update'][$vendor] : 0;
-					$ping_count = isset($stats['Ping'][$vendor]) ? $stats['Ping'][$vendor] : 0;
+					$update_count = isset($stats['U'][$vendor]) ? $stats['U'][$vendor] : 0;
 					echo '<tr class="';
 					echo $count % 2 == 0 ? 'odd' : 'even';
 					echo '"><th>', htmlentities($vendor), '</th>';
 					echo "<td>$get_count</td>";
 					echo "<td>$update_count</td>";
-					echo "<td>$ping_count</td>";
 					echo "</tr>";
 					++$count;
 				}
