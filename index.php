@@ -24,7 +24,7 @@
 		}
 	}
 
-	define('VERSION', 'R27');
+	define('VERSION', 'R28');
 	define('CONFIG_PATH', 'config/config.ini');
 	$config = file_exists(CONFIG_PATH) ? @parse_ini_file(CONFIG_PATH, TRUE) : array();
 	$config['Host']['Age'] = isset($config['Host']['Age']) ? $config['Host']['Age'] : 28800;
@@ -39,12 +39,13 @@
 	$config['Path']['Ban'] = isset($config['Path']['Ban']) ? $config['Path']['Ban'] : 'data/bans.dat';
 	$config['Path']['Host'] = isset($config['Path']['Host']) ? $config['Path']['Host'] : 'data/hosts.dat';
 	$config['Path']['URL'] = isset($config['Path']['URL']) ? $config['Path']['URL'] : 'data/urls.dat';
-	$config['Path']['Stats'] = isset($config['Path']['Stats']) ? $config['Path']['Stats'] : 'data/stats.ini';
+	$config['Path']['Stats'] = isset($config['Path']['Stats']) ? $config['Path']['Stats'] : 'data/stats.dat';
+	$config['Path']['StartTime'] = isset($config['Path']['StartTime']) ? $config['Path']['StartTime'] : 'data/start.dat';
 
 	$remote_ip = $_SERVER['REMOTE_ADDR'];
 	$now       = time();
 	$client    = isset($_SERVER['HTTP_USER_AGENT']) ? $_SERVER['HTTP_USER_AGENT'] : '';
-	$client    = trim(preg_replace('%[^\\w/\\\\. ]%i', '', substr($client, 0, 40))); // Sanitize
+	$client    = trim(preg_replace('/[\\|\\r\\n]/', '', substr($client, 0, 64))); // Sanitize
 	$get       = isset($_GET['get']) ? $_GET['get'] : '';
 	$host      = isset($_GET['ip']) ? $_GET['ip'] : '';
 	$net       = isset($_GET['net']) ? $_GET['net'] : '';
@@ -59,25 +60,23 @@
 			die("ERROR: Network Not Supported\n");
 		}
 		if(file_exists($config['Path']['Stats'])) { // Log stats
-			$client = preg_replace('/\\Anull|yes|no|true|false\\z/i', '', $client);
 			if($client == '') { $client = 'Unknown'; }
-			$stats = @parse_ini_file($config['Path']['Stats'], TRUE);
-			if(is_null(error_get_last())) {
-				if(!isset($stats['Time']['Start'])) { $stats['Time']['Start'] = $now; }
-				if($get) { $stats['Get'][$client] = isset($stats['Get'][$client]) ? $stats['Get'][$client] + 1 : 1; }
-				if($update) { $stats['Update'][$client] = isset($stats['Update'][$client]) ? $stats['Update'][$client] + 1 : 1; }
-				if($ping) { $stats['Ping'][$client] = isset($stats['Ping'][$client]) ? $stats['Ping'][$client] + 1 : 1; }
-				$output = '';
-				foreach($stats as $section => $keys) {
-					$output .= "[$section]\r\n";
-					foreach($keys as $key => $value) {
-						$output .= "$key=$value\r\n";
-					}
-				}
-				@file_put_contents($config['Path']['Stats'], $output, LOCK_EX);
-			} else {
-				echo "I|The stats file could not be read.\n";
+			$actions = array();
+			$lines = file($config['Path']['Stats']);
+			foreach($lines as $line) {
+				list($action, $vendor, $count) = explode('|', $line);
+				$actions[$action][$vendor] = $count;
 			}
+			if(!file_exists($config['Path']['StartTime'])) { @file_put_contents($config['Path']['StartTime'], $now); }
+			if($get) { $actions['G'][$client] = isset($actions['G'][$client]) ? $actions['G'][$client] + 1 : 1; }
+			if($update) { $actions['U'][$client] = isset($actions['U'][$client]) ? $actions['U'][$client] + 1 : 1; }
+			$output = '';
+			foreach($actions as $action => $stats) {
+				foreach($stats as $vendor => $count) {
+					$output .= "$action|$vendor|$count|\r\n";
+				}
+			}
+			@file_put_contents($config['Path']['Stats'], $output, LOCK_EX);
 		}
 	} else if(file_exists('main.php')) {
 		require('main.php');
