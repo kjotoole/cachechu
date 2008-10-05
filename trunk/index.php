@@ -24,7 +24,7 @@
 		}
 	}
 
-	define('VERSION', 'R28');
+	define('VERSION', 'R29');
 	define('CONFIG_PATH', 'config/config.ini');
 	$config = file_exists(CONFIG_PATH) ? @parse_ini_file(CONFIG_PATH, TRUE) : array();
 	$config['Host']['Age'] = isset($config['Host']['Age']) ? $config['Host']['Age'] : 28800;
@@ -39,13 +39,12 @@
 	$config['Path']['Ban'] = isset($config['Path']['Ban']) ? $config['Path']['Ban'] : 'data/bans.dat';
 	$config['Path']['Host'] = isset($config['Path']['Host']) ? $config['Path']['Host'] : 'data/hosts.dat';
 	$config['Path']['URL'] = isset($config['Path']['URL']) ? $config['Path']['URL'] : 'data/urls.dat';
-	$config['Path']['Stats'] = isset($config['Path']['Stats']) ? $config['Path']['Stats'] : 'data/stats.dat';
-	$config['Path']['StartTime'] = isset($config['Path']['StartTime']) ? $config['Path']['StartTime'] : 'data/start.dat';
+	$config['Path']['Stats'] = isset($config['Path']['Stats']) ? $config['Path']['Stats'] : 'data/stats.ini';
 
 	$remote_ip = $_SERVER['REMOTE_ADDR'];
 	$now       = time();
 	$client    = isset($_SERVER['HTTP_USER_AGENT']) ? $_SERVER['HTTP_USER_AGENT'] : '';
-	$client    = trim(preg_replace('/[\\|\\r\\n]/', '', substr($client, 0, 64))); // Sanitize
+	$client    = trim(preg_replace('%[^\\w/\\\\. ]%i', '', substr($client, 0, 40))); // Sanitize
 	$get       = isset($_GET['get']) ? $_GET['get'] : '';
 	$host      = isset($_GET['ip']) ? $_GET['ip'] : '';
 	$net       = isset($_GET['net']) ? $_GET['net'] : '';
@@ -60,23 +59,27 @@
 			die("ERROR: Network Not Supported\n");
 		}
 		if(file_exists($config['Path']['Stats'])) { // Log stats
+			$client = preg_replace('/\\Anull|yes|no|true|false\\z/i', '', $client);
 			if($client == '') { $client = 'Unknown'; }
-			$actions = array();
-			$lines = file($config['Path']['Stats']);
-			foreach($lines as $line) {
-				list($action, $vendor, $count) = explode('|', $line);
-				$actions[$action][$vendor] = $count;
-			}
-			if(!file_exists($config['Path']['StartTime'])) { @file_put_contents($config['Path']['StartTime'], $now); }
-			if($get) { $actions['G'][$client] = isset($actions['G'][$client]) ? $actions['G'][$client] + 1 : 1; }
-			if($update) { $actions['U'][$client] = isset($actions['U'][$client]) ? $actions['U'][$client] + 1 : 1; }
-			$output = '';
-			foreach($actions as $action => $stats) {
-				foreach($stats as $vendor => $count) {
-					$output .= "$action|$vendor|$count|\r\n";
+			$stats = @parse_ini_file($config['Path']['Stats'], TRUE);
+			if(is_null(error_get_last())) {
+				if(!isset($stats['Time']['Start'])) { $stats['Time']['Start'] = $now; }
+				if($get) { $stats['Get'][$client] = isset($stats['Get'][$client]) ? $stats['Get'][$client] + 1 : 1; }
+				if($update) { $stats['Update'][$client] = isset($stats['Update'][$client]) ? $stats['Update'][$client] + 1 : 1; }
+				if($ping) { $stats['Ping'][$client] = isset($stats['Ping'][$client]) ? $stats['Ping'][$client] + 1 : 1; }
+				$output = '';
+				foreach($stats as $section => $keys) {
+					$output .= "[$section]\r\n";
+					foreach($keys as $key => $value) {
+						$output .= "$key=$value\r\n";
+					}
 				}
+				$file = fopen($config['Path']['Stats'], 'w');
+				if(flock($file, LOCK_EX)) { @fwrite($file, $output); }
+				fclose($file); // Lock is released on close
+			} else {
+				echo "I|The stats file could not be read.\n";
 			}
-			@file_put_contents($config['Path']['Stats'], $output, LOCK_EX);
 		}
 	} else if(file_exists('main.php')) {
 		require('main.php');
@@ -155,7 +158,7 @@
 	}
 
 	if($update && $url) {
-		define('OUTPUT_REGEX', '%\\A(?:(?:(?:H\\|(?:[0-9]{1,3}\\.){3}[0-9]{1,3}.*)\\|(\\d+).*|(?:U\\|http://.+)|(?:[A-GI-TV-Z]\\|.*)))\\z%i');
+		define('OUTPUT_REGEX', '%\\A(?:(?:(?:H\\|(?:[0-9]{1,3}\\.){3}[0-9]{1,3}.*):\\d+\\|(\\d+).*|(?:U\\|http://.+)|(?:[A-GI-TV-Z]\\|.*)))\\z%i');
 		define('URL_REGEX', '/\\Ahttp:\/\/(?P<domain>[-A-Z0-9.]+)(?::(?P<port>[0-9]+))?(?P<file>\/[-A-Z0-9+&@#\/%=~_|!:,.;]*)?\\z/i');
 		define('INDEX_REGEX', '/(?:default|index)\\.(?:aspx?|cfm|cgi|htm|html|jsp|php)$/iD');
 		define('MAX_AGE', 259200); // If any hosts are older than 3 days, the cache is marked as BAD
@@ -227,11 +230,12 @@
 					if($contents) { $error = FALSE; }
 					$lines = explode("\n", $contents);
 					foreach($lines as $line) {
-						if(!preg_match(OUTPUT_REGEX, $line, $match) || isset($match[1]) && $match[1] > MAX_AGE) {
+						if(!preg_match(OUTPUT_REGEX, $line, $match) || (isset($match[1]) && $match[1] > MAX_AGE)) {
 							$error = TRUE; // Contains invalid output or ancient hosts
 							break;
 						}
 					}
+					if(count($lines) < 2) { $error = true; }
 				}
 			}
 			if(is_null($error) || ($error && $urls[$test_url]['status'] === 'BAD')) {
