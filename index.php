@@ -24,7 +24,7 @@
 		}
 	}
 
-	define('VERSION', 'R29');
+	define('VERSION', 'R30');
 	define('CONFIG_PATH', 'config/config.ini');
 	$config = file_exists(CONFIG_PATH) ? @parse_ini_file(CONFIG_PATH, TRUE) : array();
 	$config['Host']['Age'] = isset($config['Host']['Age']) ? $config['Host']['Age'] : 28800;
@@ -159,7 +159,7 @@
 
 	if($update && $url) {
 		define('OUTPUT_REGEX', '%\\A(?:(?:(?:H\\|(?:[0-9]{1,3}\\.){3}[0-9]{1,3}.*):\\d+\\|(\\d+).*|(?:U\\|http://.+)|(?:[A-GI-TV-Z]\\|.*)))\\z%i');
-		define('URL_REGEX', '/\\Ahttp:\/\/(?P<domain>[-A-Z0-9.]+)(?::(?P<port>[0-9]+))?(?P<file>\/[-A-Z0-9+&@#\/%=~_|!:,.;]*)?\\z/i');
+		define('URL_REGEX', '/\\Ahttp:\/\/(?P<domain>[-A-Z0-9.]+)(?::(?P<port>[0-9]+))?(?P<file>\/[-A-Z0-9+&@#\/%=~_!:,.;]*)?\\z/i');
 		define('INDEX_REGEX', '/(?:default|index)\\.(?:aspx?|cfm|cgi|htm|html|jsp|php)$/iD');
 		define('MAX_AGE', 259200); // If any hosts are older than 3 days, the cache is marked as BAD
 		$test_urls = array();
