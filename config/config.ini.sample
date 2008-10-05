@@ -18,6 +18,5 @@ Testing   = 1 ; If the server can only test port 80, set this option to 0 [defau
 [Path]
 Ban       = data/bans.dat
 Host      = data/hosts.dat
-Stats     = data/stats.dat ; To enable stats, create this file
-StartTime = data/start.dat
+Stats     = data/stats.ini ; To enable stats, create this file
 URL       = data/urls.dat
