@@ -1,0 +1,15 @@
+body,table,h1,form{margin:0;padding:0;font-family:Tahoma,Arial,sans-serif;}
+body{background:white;color:#555753;text-align:center;}
+a{color:#3465a4;}
+a:hover{color:#c00;}
+h1{font-size:1.5em;padding:0.75em 0;}
+form{padding-bottom:1em;}
+table{border-collapse:collapse;margin:0 auto;border:1px solid #2e3436;}
+thead, tr.caption{background:#2e3436;color:white;}
+tr.caption th{text-align:center;}
+tbody th{text-align:right;}
+th, td{text-align:left;padding:0.25em 0.75em;}
+#footer {background:#2e3436;padding:0.3em 0.5em;margin-top:1em;text-align:center;}
+caption{display:none;}
+#footer,#footer a{color: white;}
+.even{background:#eeeeec;}
