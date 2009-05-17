@@ -24,7 +24,7 @@
 		}
 	}
 
-	define('VERSION', '1.1');
+	define('VERSION', '1.11');
 	define('CONFIG_PATH', 'config/config.ini');
 	$config = file_exists(CONFIG_PATH) ? @parse_ini_file(CONFIG_PATH, TRUE) : array();
 	$config['Host']['Age'] = isset($config['Host']['Age']) ? $config['Host']['Age'] : 28800;
@@ -64,35 +64,39 @@
 				// Add the start time for statistics
 				@file_put_contents($config['Path']['Start'], time());
 			}
-			// Lock the file to avoid concurrency issues with stats
-			$file = @fopen($config['Path']['Start'], 'a');
-			if(flock($file, LOCK_EX)) {
-				$clients = array();
-				$lines = file($config['Path']['Stats']);
-				foreach($lines as $line) {
-					@list($version, $gets, $updates, $pings, $requests) = explode('|', $line);
-					$version = trim($version);
-					if($version != '') {
-						$clients[$version] = array("gets" => $gets, "updates" => $updates, "pings" => $pings, "requests" => $requests);
+			if(file_exists($config['Path']['Start'])) {
+				$timestamp = @file_get_contents($config['Path']['Start']);
+				if(!is_numeric($timestamp)) { @file_put_contents($config['Path']['Start'], time()); }
+				$file = @fopen($config['Path']['Start'], 'a');
+				// Lock the file to avoid concurrency issues with stats
+				if($file && @flock($file, LOCK_EX)) {
+					$clients = array();
+					$lines = file($config['Path']['Stats']);
+					foreach($lines as $line) {
+						@list($version, $gets, $updates, $pings, $requests) = explode('|', $line);
+						$version = trim($version);
+						if($version != '') {
+							$clients[$version] = array("gets" => $gets, "updates" => $updates, "pings" => $pings, "requests" => $requests);
+						}
 					}
+					if(!array_key_exists($client, $clients)) {
+						$clients[$client] = array("gets" => 0, "updates" => 0, "pings" => 0, "requests" => 0);
+					}
+					$clients[$client]["gets"] += $get == '' ? 0 : 1;
+					$clients[$client]["updates"] += $update == '' ? 0 : 1;
+					$clients[$client]["pings"] += $ping == '' ? 0 : 1;
+					$clients[$client]["requests"] += 1;
+					$output = '';
+					foreach($clients as $version => $stats) {
+						$output .= $version;
+						foreach($stats as $stat) { $output .= "|$stat"; }
+						$output .= "|\r\n";
+					}
+					@file_put_contents($config['Path']['Stats'], $output, LOCK_EX);
+					if($file) { @flock($file, LOCK_UN); }
 				}
-				if(!array_key_exists($client, $clients)) {
-					$clients[$client] = array("gets" => 0, "updates" => 0, "pings" => 0, "requests" => 0);
-				}
-				$clients[$client]["gets"] += $get == '' ? 0 : 1;
-				$clients[$client]["updates"] += $update == '' ? 0 : 1;
-				$clients[$client]["pings"] += $ping == '' ? 0 : 1;
-				$clients[$client]["requests"] += 1;
-				$output = '';
-				foreach($clients as $version => $stats) {
-					$output .= $version;
-					foreach($stats as $stat) { $output .= "|$stat"; }
-					$output .= "|\r\n";
-				}
-				@file_put_contents($config['Path']['Stats'], $output, LOCK_EX);
-				flock($file, LOCK_UN);
+				if($file) { @fclose($file); }
 			}
-			fclose($file);
 		}
 	} else if(file_exists('main.php')) {
 		require('main.php');
