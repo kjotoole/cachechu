@@ -1,0 +1,23 @@
+; Remove .sample from file to use
+
+[Cache]
+Advertise = 1 ; If non-zero, will advertise cache to other caches [default 1]
+BanTime   = 3600 ; Amount of time to ban hosts after one update [default 1 hour]
+
+[URL]
+Age       = 604800 ; Max age to display a URL [default 1 week]
+Output    = 30 ; Max URLs to output [default 30]
+TestAge   = 86400 ; Min age to test a URL [default 1 day]
+
+[Host]
+Age       = 28800 ; Max age to keep in cache [default 8 hours]
+Output    = 30 ; Max hosts to output [default 30]
+Store     = 50 ; Max hosts to store [default 50]
+Testing   = 1 ; If the server can only test port 80, set this option to 0 [default 1]
+
+[Path]
+Ban       = data/bans.dat
+Host      = data/hosts.dat
+URL       = data/urls.dat
+Stats     = data/stats.dat
+Start     = data/start.dat
