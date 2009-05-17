@@ -16,7 +16,7 @@
 
 	function get_url($url) {
 		$url = urldecode(rtrim(preg_replace(INDEX_REGEX, '', $url), '/'));
-		if(!preg_match($url, '/nyuc?d\\.net/s') && preg_match(URL_REGEX, $url, $match)) {
+		if(!preg_match('/nyuc?d\\.net/s', $url) && preg_match(URL_REGEX, $url, $match)) {
 			if(!isset($match['file'])) { $url .= '/'; }
 			return $url;
 		} else {
@@ -24,7 +24,7 @@
 		}
 	}
 
-	define('VERSION', 'R31');
+	define('VERSION', '1.1');
 	define('CONFIG_PATH', 'config/config.ini');
 	$config = file_exists(CONFIG_PATH) ? @parse_ini_file(CONFIG_PATH, TRUE) : array();
 	$config['Host']['Age'] = isset($config['Host']['Age']) ? $config['Host']['Age'] : 28800;
@@ -39,11 +39,13 @@
 	$config['Path']['Ban'] = isset($config['Path']['Ban']) ? $config['Path']['Ban'] : 'data/bans.dat';
 	$config['Path']['Host'] = isset($config['Path']['Host']) ? $config['Path']['Host'] : 'data/hosts.dat';
 	$config['Path']['URL'] = isset($config['Path']['URL']) ? $config['Path']['URL'] : 'data/urls.dat';
-
+	$config['Path']['Stats'] = isset($config['Path']['Stats']) ? $config['Path']['Stats'] : 'data/stats.dat';
+	$config['Path']['Start'] = isset($config['Path']['Start']) ? $config['Path']['Start'] : 'data/start.dat';
+	
 	$remote_ip = $_SERVER['REMOTE_ADDR'];
 	$now       = time();
 	$client    = isset($_SERVER['HTTP_USER_AGENT']) ? $_SERVER['HTTP_USER_AGENT'] : '';
-	$client    = trim(preg_replace('%[^\\w/\\\\. ]%i', '', substr($client, 0, 40))); // Sanitize
+	$client    = trim(preg_replace('[|\\r\\n]', '', substr($client, 0, 50))); // Sanitize
 	$get       = isset($_GET['get']) ? $_GET['get'] : '';
 	$host      = isset($_GET['ip']) ? $_GET['ip'] : '';
 	$net       = isset($_GET['net']) ? $_GET['net'] : '';
@@ -56,6 +58,41 @@
 		if(strtolower($net) != 'gnutella2') {
 			header('HTTP/1.0 404 Not Found');
 			die("ERROR: Network Not Supported\n");
+		}
+		if(file_exists($config['Path']['Stats'])) { // Log stats
+			if(!file_exists($config['Path']['Start'])) {
+				// Add the start time for statistics
+				@file_put_contents($config['Path']['Start'], time());
+			}
+			// Lock the file to avoid concurrency issues with stats
+			$file = @fopen($config['Path']['Start'], 'a');
+			if(flock($file, LOCK_EX)) {
+				$clients = array();
+				$lines = file($config['Path']['Stats']);
+				foreach($lines as $line) {
+					@list($version, $gets, $updates, $pings, $requests) = explode('|', $line);
+					$version = trim($version);
+					if($version != '') {
+						$clients[$version] = array("gets" => $gets, "updates" => $updates, "pings" => $pings, "requests" => $requests);
+					}
+				}
+				if(!array_key_exists($client, $clients)) {
+					$clients[$client] = array("gets" => 0, "updates" => 0, "pings" => 0, "requests" => 0);
+				}
+				$clients[$client]["gets"] += $get == '' ? 0 : 1;
+				$clients[$client]["updates"] += $update == '' ? 0 : 1;
+				$clients[$client]["pings"] += $ping == '' ? 0 : 1;
+				$clients[$client]["requests"] += 1;
+				$output = '';
+				foreach($clients as $version => $stats) {
+					$output .= $version;
+					foreach($stats as $stat) { $output .= "|$stat"; }
+					$output .= "|\r\n";
+				}
+				@file_put_contents($config['Path']['Stats'], $output, LOCK_EX);
+				flock($file, LOCK_UN);
+			}
+			fclose($file);
 		}
 	} else if(file_exists('main.php')) {
 		require('main.php');
