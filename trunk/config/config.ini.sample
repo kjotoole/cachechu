@@ -19,3 +19,5 @@ Testing   = 1 ; If the server can only test port 80, set this option to 0 [defau
 Ban       = data/bans.dat
 Host      = data/hosts.dat
 URL       = data/urls.dat
+Stats     = data/stats.dat
+Start     = data/start.dat
