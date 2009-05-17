@@ -1,5 +1,5 @@
 <?php
-	// Copyright (c) kevogod, 2008.
+	// Copyright (c) kevogod, 2008-2009.
 	//
 	// This program is free software: you can redistribute it and/or modify
 	// it under the terms of the GNU General Public License as published by
@@ -16,7 +16,7 @@
 
 	function get_url($url) {
 		$url = urldecode(rtrim(preg_replace(INDEX_REGEX, '', $url), '/'));
-		if(strpos($url, 'nyud.net') === FALSE && preg_match(URL_REGEX, $url, $match)) {
+		if(!preg_match($url, '/nyuc?d\\.net/s') && preg_match(URL_REGEX, $url, $match)) {
 			if(!isset($match['file'])) { $url .= '/'; }
 			return $url;
 		} else {
@@ -24,7 +24,7 @@
 		}
 	}
 
-	define('VERSION', 'R30');
+	define('VERSION', 'R31');
 	define('CONFIG_PATH', 'config/config.ini');
 	$config = file_exists(CONFIG_PATH) ? @parse_ini_file(CONFIG_PATH, TRUE) : array();
 	$config['Host']['Age'] = isset($config['Host']['Age']) ? $config['Host']['Age'] : 28800;
@@ -39,7 +39,6 @@
 	$config['Path']['Ban'] = isset($config['Path']['Ban']) ? $config['Path']['Ban'] : 'data/bans.dat';
 	$config['Path']['Host'] = isset($config['Path']['Host']) ? $config['Path']['Host'] : 'data/hosts.dat';
 	$config['Path']['URL'] = isset($config['Path']['URL']) ? $config['Path']['URL'] : 'data/urls.dat';
-	$config['Path']['Stats'] = isset($config['Path']['Stats']) ? $config['Path']['Stats'] : 'data/stats.ini';
 
 	$remote_ip = $_SERVER['REMOTE_ADDR'];
 	$now       = time();
@@ -57,29 +56,6 @@
 		if(strtolower($net) != 'gnutella2') {
 			header('HTTP/1.0 404 Not Found');
 			die("ERROR: Network Not Supported\n");
-		}
-		if(file_exists($config['Path']['Stats'])) { // Log stats
-			$client = preg_replace('/\\Anull|yes|no|true|false\\z/i', '', $client);
-			if($client == '') { $client = 'Unknown'; }
-			$stats = @parse_ini_file($config['Path']['Stats'], TRUE);
-			if(is_null(error_get_last())) {
-				if(!isset($stats['Time']['Start'])) { $stats['Time']['Start'] = $now; }
-				if($get) { $stats['Get'][$client] = isset($stats['Get'][$client]) ? $stats['Get'][$client] + 1 : 1; }
-				if($update) { $stats['Update'][$client] = isset($stats['Update'][$client]) ? $stats['Update'][$client] + 1 : 1; }
-				if($ping) { $stats['Ping'][$client] = isset($stats['Ping'][$client]) ? $stats['Ping'][$client] + 1 : 1; }
-				$output = '';
-				foreach($stats as $section => $keys) {
-					$output .= "[$section]\r\n";
-					foreach($keys as $key => $value) {
-						$output .= "$key=$value\r\n";
-					}
-				}
-				$file = fopen($config['Path']['Stats'], 'w');
-				if(flock($file, LOCK_EX)) { @fwrite($file, $output); }
-				fclose($file); // Lock is released on close
-			} else {
-				echo "I|The stats file could not be read.\n";
-			}
 		}
 	} else if(file_exists('main.php')) {
 		require('main.php');
