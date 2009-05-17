@@ -13,7 +13,6 @@ II. File List
     o   index.php                - Cachechu PHP code
     o   main.php                 - Web interface
     o   data/urls.dat.sample     - default list of URLs (remove .sample to use)
-    o   data/stats.ini.sample    - enables stats (remove .sample to use)
     o   config/config.ini.sample - default config file (remove .sample to use)
     o   readme.txt               - this file
 
@@ -29,11 +28,7 @@ III. Requirements
 
       index.php
 
-    3.  To enable stat logging, the following file should exist:
-
-      data/stats.ini
-
-    4.  If your host cannot test clients on a port other than 80,
+    3.  If your host cannot test clients on a port other than 80,
         set [Host] Testing in config.ini to 0.
 
 IV. Web interface
@@ -44,4 +39,4 @@ IV. Web interface
 
 V. Compatibility
 
-    Cachechu has been tested under PHP 5.2.6.
+    Cachechu has been tested under PHP 5.2.9.
