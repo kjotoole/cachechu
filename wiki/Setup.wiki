@@ -1,4 +1,4 @@
-#summary This page contains helpful information about setting up Cachechu on a server.
+#summary This page contains basic information about setting up Cachechu on a server.
 #labels Featured,Phase-Deploy
 
 == Introduction ==
