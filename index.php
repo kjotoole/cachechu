@@ -15,12 +15,12 @@
 	// along with this program.  If not, see <http://www.gnu.org/licenses/>.
 	
 	ob_start(); // Enable output buffering
-	define('VERSION', 'R48');
+	define('VERSION', 'R49');
 	define('AGENT', 'Cachechu ' . VERSION);
 	define('DEFAULT_NET', 'gnutella2');
 	define('OLD_NET', 'gnutella');
 	define('NET_REPLACE', '<network>');
-	define('BLOCK_REGEX', '%^Mozilla/4\\.0$|^CoralWebPrx.*$%');
+	define('BLOCK_REGEX', '%^Mozilla/4\\.0$|^CoralWebPrx.*$|^FTWebCache.*$%');
 	define('IP_REGEX', '/\\A((?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)):([1-9][0-9]{0,4})\\z/');
 	define('INDEX_REGEX', '/(?:default|index)\\.(?:aspx?|cfm|cgi|htm|html|jsp|php)$/iD');
 	define('OUTPUT_REGEX', '%\\A(?:(?:(?:H\\|(?:[0-9]{1,3}\\.){3}[0-9]{1,3}.*):\\d+\\|(\\d+).*|(?:U\\|http://.+)|(?:[A-GI-TV-Z]\\|.*)))\\z%i');
@@ -336,7 +336,7 @@
 			@list($xurl, $time, $status, $ip, $xnet, $xclient) = explode('|', trim($line));
 			$xnet = trim($xnet) == '' ? DEFAULT_NET : $xnet;
 			$xurl = get_url($xurl);
-			if($xurl !== FALSE) {
+			if($xurl !== FALSE && !preg_match(BLOCK_REGEX, $xclient)) {
 				$urls[$xurl][$xnet] = array('Time' => $time, 'Status' => $status, 'IP' => $ip, 'Client' => $xclient);
 				if($xnet == $net && $time === 0 || $now - $time >= $config['URL']['TestAge']) {
 					$test_urls[$xurl] = $status; // Test old URLs
@@ -407,7 +407,8 @@
 				}
 			}
 			// Add or remove URL from cache
-			if(is_null($error) || ($error && isset($urls[$test_url][$net]) && $urls[$test_url][$net]['Status'] === 'BAD')) {
+			if(is_null($error) || preg_match(BLOCK_REGEX, $test_client) || ($error &&
+					isset($urls[$test_url][$net]) && $urls[$test_url][$net]['Status'] === 'BAD')) {
 				unset($urls[$test_url]); // Remove from cache after testing BAD a 2nd time, or no IP
 			} else {
 				$urls[$test_url][$net]['Time'] = $now;
