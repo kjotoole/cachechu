@@ -1,8 +1,10 @@
 ; Remove .sample from file to use
+[Network]
+Support   = Gnutella2 ; Comma-delimited list of networks supported (e.g. Gnutella2, Gnutella)
 
 [Cache]
 Advertise = 1 ; If non-zero, will advertise cache to other caches [default 1]
-BanTime   = 3600 ; Amount of time to ban hosts after one update [default 1 hour]
+BanTime   = 3300 ; Amount of time to ban hosts after one update [default 1 hour]
 
 [URL]
 Age       = 604800 ; Max age to display a URL [default 1 week]
@@ -10,9 +12,8 @@ Output    = 30 ; Max URLs to output [default 30]
 TestAge   = 86400 ; Min age to test a URL [default 1 day]
 
 [Host]
-Age       = 28800 ; Max age to keep in cache [default 8 hours]
-Output    = 30 ; Max hosts to output [default 30]
-Store     = 50 ; Max hosts to store [default 50]
+Age       = 57600 ; Max age to keep in cache [default 16 hours]
+Output    = 30 ; Max hosts to output and store [default 30]
 Testing   = 1 ; If the server can only test port 80, set this option to 0 [default 1]
 
 [Path]
@@ -21,3 +22,10 @@ Host      = data/hosts.dat
 URL       = data/urls.dat
 Stats     = data/stats.dat
 Start     = data/start.dat
+
+[Interface]
+Show      = 1 ; If non-zero, will show Web interface
+Info      = 1 ; If non-zero, will show stats, services, hosts
+
+[Stats]
+Enable    = 1;

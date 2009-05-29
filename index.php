@@ -15,7 +15,7 @@
 	// along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 	ob_start(); // Enable output buffering
-	define('VERSION', 'R42');
+	define('VERSION', 'R43');
 	define('AGENT', 'Cachechu ' . VERSION);
 	define('IP_REGEX', '/\\A((?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)):([1-9][0-9]{0,4})\\z/');
 	define('INDEX_REGEX', '/(?:default|index)\\.(?:aspx?|cfm|cgi|htm|html|jsp|php)$/iD');
@@ -85,11 +85,10 @@
 			return FALSE;
 		}
 	}
-
+	
 	$config = file_exists(CONFIG_PATH) ? @parse_ini_file(CONFIG_PATH, TRUE) : array();
 	$config['Host']['Age'] = isset($config['Host']['Age']) ? $config['Host']['Age'] : 28800;
 	$config['Host']['Output'] = isset($config['Host']['Output']) ? $config['Host']['Output'] : 30;
-	$config['Host']['Store'] = isset($config['Host']['Store']) ? $config['Host']['Store'] : 50;
 	$config['Host']['Testing'] = isset($config['Host']['Testing']) ? $config['Host']['Testing'] : 1;
 	$config['URL']['Age'] = isset($config['URL']['Age']) ? $config['URL']['Age'] : 604800;
 	$config['URL']['Output'] = isset($config['URL']['Output']) ? $config['URL']['Output'] : 30;
@@ -101,17 +100,29 @@
 	$config['Path']['URL'] = isset($config['Path']['URL']) ? $config['Path']['URL'] : 'data/urls.dat';
 	$config['Path']['Stats'] = isset($config['Path']['Stats']) ? $config['Path']['Stats'] : 'data/stats.dat';
 	$config['Path']['Start'] = isset($config['Path']['Start']) ? $config['Path']['Start'] : 'data/start.dat';
+	$config['Interface']['Show'] = isset($config['Interface']['Show']) ? $config['Interface']['Show'] : 1;
+	$config['Interface']['Info'] = isset($config['Interface']['Info']) ? $config['Interface']['Info'] : 1;
+	$config['Interface']['StatsLimit'] = isset($config['Interface']['StatsLimit']) ? $config['Interface']['StatsLimit'] : 10;
+	$config['Stats']['Enable'] = isset($config['Stats']['Enable']) ? $config['Stats']['Enable'] : TRUE;
 	
 	$remote_ip = $_SERVER['REMOTE_ADDR'];
 	$now       = time();
+	$vendor    = isset($_GET['client']) ? ucwords(strtolower($_GET['client'])) : '';
+	$version   = isset($_GET['version']) ? $_GET['version'] : '';
 	$client    = isset($_SERVER['HTTP_USER_AGENT']) ? $_SERVER['HTTP_USER_AGENT'] : '';
 	$client    = trim(preg_replace('[|\\r\\n]', '', substr($client, 0, 50))); // Sanitize
+	$client    = $client == 'Mozilla/4.0' && $vendor == 'Foxy' ? "$vendor $version" : $client;
 	$get       = isset($_GET['get']) ? $_GET['get'] : '';
 	$host      = isset($_GET['ip']) ? $_GET['ip'] : '';
 	$net       = isset($_GET['net']) ? $_GET['net'] : '';
 	$ping      = isset($_GET['ping']) ? $_GET['ping'] : '';
 	$update    = isset($_GET['update']) ? $_GET['update'] : '';
 	$url       = isset($_GET['url']) ? trim($_GET['url']) : '';
+	// GWC1 requests (Used only by gnutella)
+	$hostfile  = isset($_GET['hostfile']) ? $_GET['hostfile'] : '';
+	$urlfile   = isset($_GET['urlfile']) ? $_GET['urlfile'] : '';
+	$statfile  = isset($_GET['statfile']) ? $_GET['statfile'] : '';
+	$is_new    = TRUE; // Use GWC2 style if true
 
 	if(!empty($_GET)) {
 		header('Content-Type: text/plain');
@@ -158,7 +169,7 @@
 				if($file) { @fclose($file); }
 			}
 		}
-	} else if(file_exists('main.php')) {
+	} else if(file_exists('main.php') && $config['Interface']['Show']) {
 		require('main.php');
 	} else {
 		header('Content-Type: text/plain');
@@ -188,7 +199,7 @@
 	if($update && $host) {
 		$error = TRUE;
 		if(strpos($host, $remote_ip) !== FALSE && preg_match(IP_REGEX, $host)) {
-			if(FALSE && $config['Host']['Testing']) {
+			if($config['Host']['Testing']) {
 				list($ip, $port) = explode(':', $host);
 				$output = trim(download_data($ip, $port, "GNUTELLA CONNECT/0.6\r\n\r\n", FALSE));
 				if($output != '') { $error = FALSE; }
@@ -213,8 +224,8 @@
 
 			// Limit number of hosts in file, keeps hosts at the end of the list
 			$host_count = count($new_lines);
-			if($host_count > $config['Host']['Store']) {
-				$new_lines = array_slice($new_lines, $host_count - $config['Host']['Store'], $config['Host']['Store']);
+			if($host_count > $config['Host']['Output']) {
+				$new_lines = array_slice($new_lines, $host_count - $config['Host']['Output'], $config['Host']['Output']);
 			}
 
 			// Save hosts file and ignore concurrency issues

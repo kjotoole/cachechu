@@ -13,7 +13,8 @@
 		<a href="http://code.google.com/p/cachechu/"
 			title="Cachechu Projects Page">Cachechu Gnutella2 GWebCache</a>
 	</h1>
-
+	
+	<?php if($config['Interface']['Info']): ?>
 	<form method="get" action="<?php echo $_SERVER['PHP_SELF'] ?>">
 		<div>
 			<input type="hidden" name="net" value="gnutella2">
@@ -88,14 +89,14 @@
 				<td><?php echo round($total_pings / $hour, 1); ?></td>
 			</tr>
 			<tr class="caption">
-				<th colspan="5">Top 10</th>
+				<th colspan="5">Top <?php echo $config['Interface']['StatsLimit']; ?></th>
 			</tr>
 			<?php
 				$count = 0;
 				$requests = is_array($stats['Requests']) ? $stats['Requests'] : array();
 				natsort($requests);
 				$requests = array_reverse($requests, TRUE);
-				$requests = array_slice($requests, 0, 10, TRUE);
+				$requests = array_slice($requests, 0, $config['Interface']['StatsLimit'], TRUE);
 				foreach($requests as $vendor => $reqs) {
 					$gets = isset($stats['Gets'][$vendor]) ? $stats['Gets'][$vendor] : 0;
 					$updates = isset($stats['Updates'][$vendor]) ? $stats['Updates'][$vendor] : 0;
@@ -113,6 +114,7 @@
 			?>
 		</tbody>
 	</table>
+	<?php endif; ?>
 	<?php endif; ?>
 
 	<div id="footer">
