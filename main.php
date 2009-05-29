@@ -249,6 +249,7 @@
 							echo '<td>', $age, '</td>';
 							echo '</tr>';
 							++$count;
+							if($count >= $config['Host']['Output']) { break; }
 						}
 				}
 				if(!$count) {
