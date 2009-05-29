@@ -24,8 +24,13 @@
 		}
 	}
 
-	define('VERSION', 'R39');
+	define('VERSION', 'R40');
 	define('AGENT', 'Cachechu ' . VERSION);
+	define('IP_REGEX', '/\\A((?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)):(\\d+)\\z/');
+	define('INDEX_REGEX', '/(?:default|index)\\.(?:aspx?|cfm|cgi|htm|html|jsp|php)$/iD');
+	define('OUTPUT_REGEX', '%\\A(?:(?:(?:H\\|(?:[0-9]{1,3}\\.){3}[0-9]{1,3}.*):\\d+\\|(\\d+).*|(?:U\\|http://.+)|(?:[A-GI-TV-Z]\\|.*)))\\z%i');
+	define('URL_REGEX', '/\\Ahttp:\/\/(?P<domain>[-A-Z0-9.]+)(?::(?P<port>[0-9]+))?(?P<file>\/[-A-Z0-9+&@#\/%=~_!:,.;]*)?\\z/i');
+	define('MAX_AGE', 259200); // If any hosts are older than 3 days, the cache is marked as BAD
 	define('CONFIG_PATH', 'config/config.ini');
 	$config = file_exists(CONFIG_PATH) ? @parse_ini_file(CONFIG_PATH, TRUE) : array();
 	$config['Host']['Age'] = isset($config['Host']['Age']) ? $config['Host']['Age'] : 28800;
@@ -127,7 +132,6 @@
 
 	// Add host to cache
 	if($update && $host) {
-		define('IP_REGEX', '/\\A((?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)):(\\d+)\\z/');
 		$error = TRUE;
 		if(strpos($host, $remote_ip) !== FALSE && preg_match(IP_REGEX, $host)) {
 			if($config['Host']['Testing']) {
@@ -176,10 +180,6 @@
 	}
 
 	if($update && $url) {
-		define('OUTPUT_REGEX', '%\\A(?:(?:(?:H\\|(?:[0-9]{1,3}\\.){3}[0-9]{1,3}.*):\\d+\\|(\\d+).*|(?:U\\|http://.+)|(?:[A-GI-TV-Z]\\|.*)))\\z%i');
-		define('URL_REGEX', '/\\Ahttp:\/\/(?P<domain>[-A-Z0-9.]+)(?::(?P<port>[0-9]+))?(?P<file>\/[-A-Z0-9+&@#\/%=~_!:,.;]*)?\\z/i');
-		define('INDEX_REGEX', '/(?:default|index)\\.(?:aspx?|cfm|cgi|htm|html|jsp|php)$/iD');
-		define('MAX_AGE', 259200); // If any hosts are older than 3 days, the cache is marked as BAD
 		$test_urls = array();
 		$urls = array();
 		$lines = file_exists($config['Path']['URL']) ? file($config['Path']['URL']) : array();
@@ -323,4 +323,3 @@
 	}
 
 	if(!empty($_GET)) { echo "I|access|period|1800\n"; }
-?>
