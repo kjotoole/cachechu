@@ -15,7 +15,7 @@
 	// along with this program.  If not, see <http://www.gnu.org/licenses/>.
 	
 	ob_start(); // Enable output buffering
-	define('VERSION', 'R47');
+	define('VERSION', 'R48');
 	define('AGENT', 'Cachechu ' . VERSION);
 	define('DEFAULT_NET', 'gnutella2');
 	define('OLD_NET', 'gnutella');
@@ -279,7 +279,7 @@
 	if($update && $host) {
 		$error = TRUE;
 		if(strpos($host, $remote_ip) !== FALSE && preg_match(IP_REGEX, $host)) {
-			if($config['Host']['Testing']) {
+			if($config['Host']['Testing'] && $net != 'foxy') {
 				list($ip, $port) = explode(':', $host);
 				$output = trim(download_data($ip, $port, "GNUTELLA CONNECT/0.6\r\n\r\n", FALSE));
 				if($output != '') { $error = FALSE; }
