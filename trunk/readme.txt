@@ -21,6 +21,7 @@ II. File List
     o   readme.txt                     - this file
 
 III. Requirements
+
     1.  First time users should remove .sample from config.ini.sample.
         Remove .sample from urls.dat.sample files, if you want to start off with default caches.
 
@@ -54,7 +55,10 @@ III. Requirements
       Enable = 0;
 
     6.  If your host cannot test clients on a port other than 80,
-        set [Host] Testing in config.ini to 0.
+        the following configuration should be present:
+
+      [Host]
+      Testing = 0
 
 IV. Web interface
 
@@ -70,9 +74,10 @@ IV. Web interface
 
     3.  Stats shows the statistics for each supported network, if enabled.
 
-    4.  Hosts shows the IP, port, client, timestamp, and age of hosts for each network.
+    4.  Hosts shows the country (if GeoIP present), IP, port, client, timestamp,
+        and age of hosts for each network.
 
-    5.  Services shows the country (if geoip present), URL, IP, client, timestamp of
+    5.  Services shows the country (if GeoIP present), URL, IP, client, timestamp of
         caches for each network.
 
 V. Compatibility
