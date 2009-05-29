@@ -15,7 +15,7 @@
 	// along with this program.  If not, see <http://www.gnu.org/licenses/>.
 	
 	ob_start(); // Enable output buffering
-	define('VERSION', 'R49');
+	define('VERSION', 'R50');
 	define('AGENT', 'Cachechu ' . VERSION);
 	define('DEFAULT_NET', 'gnutella2');
 	define('OLD_NET', 'gnutella');
@@ -406,9 +406,11 @@
 					break;
 				}
 			}
+			if($test_client == '' || preg_match(BLOCK_REGEX, $test_client)) {
+				$error = TRUE;
+			}
 			// Add or remove URL from cache
-			if(is_null($error) || preg_match(BLOCK_REGEX, $test_client) || ($error &&
-					isset($urls[$test_url][$net]) && $urls[$test_url][$net]['Status'] === 'BAD')) {
+			if(is_null($error) || ($error && isset($urls[$test_url][$net]) && $urls[$test_url][$net]['Status'] === 'BAD')) {
 				unset($urls[$test_url]); // Remove from cache after testing BAD a 2nd time, or no IP
 			} else {
 				$urls[$test_url][$net]['Time'] = $now;
