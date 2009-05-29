@@ -13,9 +13,9 @@
 	//
 	// You should have received a copy of the GNU General Public License
 	// along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
+	
 	ob_start(); // Enable output buffering
-	define('VERSION', 'R44');
+	define('VERSION', 'R45');
 	define('AGENT', 'Cachechu ' . VERSION);
 	define('DEFAULT_NET', 'gnutella2');
 	define('OLD_NET', 'gnutella');
@@ -239,7 +239,7 @@
 	} else {
 		header('Content-Type: text/plain');
 	}
-
+	
 	// Basic spam protection (1 update per hour [default])
 	if($update) {
 		$exists = file_exists($config['Path']['Ban']);
@@ -421,7 +421,7 @@
 		} else if($test_url) {
 			unset($urls[$test_url]); // For whatever reason the URL is invalid
 		}
-
+		
 		// Generate URL output
 		$output = '';		
 		foreach($urls as $xurl => $nets) {
@@ -494,6 +494,33 @@
 			if(!$count && $is_new) { echo "I|NO-URLS\n"; }
 			if($urlfile && !$is_new) { die(); } // Output only URLs for old style request
 		}
+	}
+	
+	// Return stats information for old style request
+	if($statfile && !$is_new && file_exists($config['Path']['Stats'])) {
+		$time = $now;
+		$lines = file_exists($config['Path']['Start']) ? @file($config['Path']['Start']) : array();
+		foreach($lines as $line) {
+			@list($timestamp, $xnet) = explode('|', $line);
+			$xnet = trim($xnet) == '' ? DEFAULT_NET : $xnet;
+			if(is_numeric($timestamp) && $xnet == OLD_NET) { $time = $timestamp; }
+		}
+		$lines = file($config['Path']['Stats']);
+		$hour = ($now - $time) / 60 / 60;
+		if($hour == 0) { $hour = 1; }
+		$total_updates = 0;
+		$total_requests = 0;
+		foreach($lines as $line) {
+			@list($version, $gets, $updates, $pings, $requests, $xnet) = explode('|', $line);
+			$xnet = trim($xnet) == '' ? DEFAULT_NET : $xnet;
+			if($xnet == OLD_NET && $version != '') {
+				$total_updates += $updates;
+				$total_requests += $requests;
+			}
+		}
+		$hourly_updates = intval($total_updates / $hour);
+		$hourly_requests = intval($total_requests / $hour);
+		die("$total_requests\n$hourly_updates\n$hourly_requests\n");
 	}
 	
 	// Tell client not to come back for another 30 minutes
