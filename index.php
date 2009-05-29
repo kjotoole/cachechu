@@ -14,6 +14,17 @@
 	// You should have received a copy of the GNU General Public License
 	// along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+	ob_start(); // Enable output buffering
+	define('VERSION', 'R42');
+	define('AGENT', 'Cachechu ' . VERSION);
+	define('IP_REGEX', '/\\A((?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)):([1-9][0-9]{0,4})\\z/');
+	define('INDEX_REGEX', '/(?:default|index)\\.(?:aspx?|cfm|cgi|htm|html|jsp|php)$/iD');
+	define('OUTPUT_REGEX', '%\\A(?:(?:(?:H\\|(?:[0-9]{1,3}\\.){3}[0-9]{1,3}.*):\\d+\\|(\\d+).*|(?:U\\|http://.+)|(?:[A-GI-TV-Z]\\|.*)))\\z%i');
+	define('URL_REGEX', '/\\Ahttp:\/\/(?P<domain>[-A-Z0-9.]+)(?::(?P<port>[0-9]+))?(?P<file>\/[-A-Z0-9+&@#\/%=~_!:,.;]*)?\\z/i');
+	define('SLASH_REGEX', '%^[^.]+[^/]$%');
+	define('MAX_HOST_AGE', 259200); // If any hosts are older than 3 days, the cache is marked as BAD
+	define('CONFIG_PATH', 'config/config.ini');
+	
 	// Request data from a host asynchronously
 	function download_data($address, $port, $input, $web) {
 		ini_set('user_agent', AGENT);
@@ -55,23 +66,26 @@
 	
 	// Get valid URL or return false on error
 	function get_url($url) {
-		$url = urldecode(rtrim(preg_replace(INDEX_REGEX, '', $url), '/'));
+		$url = urldecode(preg_replace(INDEX_REGEX, '', $url));
+		$new_url = rtrim($url, '/');
+		if($new_url != $url) { $url = $new_url . '/'; }
 		if(!preg_match('/nyuc?d\\.net/s', $url) && preg_match(URL_REGEX, $url, $match)) {
-			if(!isset($match['file'])) { $url .= '/'; }
+			if($match['port']) {
+				$port = ltrim($match['port'], '0');
+				if($port >= 1 && $port <= 65535) {
+					$replace = $port == 80 ? '' : ':' . $port;
+					$url = str_replace(':' . $match['port'], $replace, $url);
+				} else {
+					$url = FALSE;
+				}
+			}
+			$url = str_replace($match['domain'], strtolower($match['domain']), $url);
 			return $url;
 		} else {
 			return FALSE;
 		}
 	}
 
-	define('VERSION', 'R41');
-	define('AGENT', 'Cachechu ' . VERSION);
-	define('IP_REGEX', '/\\A((?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)):(\\d+)\\z/');
-	define('INDEX_REGEX', '/(?:default|index)\\.(?:aspx?|cfm|cgi|htm|html|jsp|php)$/iD');
-	define('OUTPUT_REGEX', '%\\A(?:(?:(?:H\\|(?:[0-9]{1,3}\\.){3}[0-9]{1,3}.*):\\d+\\|(\\d+).*|(?:U\\|http://.+)|(?:[A-GI-TV-Z]\\|.*)))\\z%i');
-	define('URL_REGEX', '/\\Ahttp:\/\/(?P<domain>[-A-Z0-9.]+)(?::(?P<port>[0-9]+))?(?P<file>\/[-A-Z0-9+&@#\/%=~_!:,.;]*)?\\z/i');
-	define('MAX_HOST_AGE', 259200); // If any hosts are older than 3 days, the cache is marked as BAD
-	define('CONFIG_PATH', 'config/config.ini');
 	$config = file_exists(CONFIG_PATH) ? @parse_ini_file(CONFIG_PATH, TRUE) : array();
 	$config['Host']['Age'] = isset($config['Host']['Age']) ? $config['Host']['Age'] : 28800;
 	$config['Host']['Output'] = isset($config['Host']['Output']) ? $config['Host']['Output'] : 30;
@@ -339,10 +353,11 @@
 		$lines = file_exists($config['Path']['URL']) ? file($config['Path']['URL']) : array();
 		shuffle($lines);
 		foreach($lines as $line) {
-			list($url, $time, $status) = explode('|', $line);
+			list($xurl, $time, $status) = explode('|', $line);
+			$xurl = get_url($xurl);
 			$age = $time > 0 ? $now - $time : 3600;
-			if($age < $config['URL']['Age'] && $status === 'OK') {
-				echo "U|$url|$age\n";
+			if($xurl && $age < $config['URL']['Age'] && $age >= 0 && $status === 'OK') {
+				echo "U|$xurl|$age\n";
 				++$count;
 				if($count >= $config['URL']['Output']) { break; }
 			}
