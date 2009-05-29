@@ -17,11 +17,11 @@ Output    = 30 ; Max hosts to output and store [default 30]
 Testing   = 1 ; If the server can only test port 80, set this option to 0 [default 1]
 
 [Path]
-Ban       = data/bans.dat
-Host      = data/hosts.dat
-URL       = data/urls.dat
-Stats     = data/stats.dat
-Start     = data/start.dat
+Ban       = data/<network>/bans.dat
+Host      = data/<network>/hosts.dat
+URL       = data/<network>/urls.dat
+Stats     = data/<network>/stats.dat
+Start     = data/<network>/start.dat
 
 [Interface]
 Show      = 1 ; If non-zero, will show Web interface
