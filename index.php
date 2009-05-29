@@ -15,7 +15,7 @@
 	// along with this program.  If not, see <http://www.gnu.org/licenses/>.
 	
 	ob_start(); // Enable output buffering
-	define('VERSION', 'R50');
+	define('VERSION', 'R51');
 	define('AGENT', 'Cachechu ' . VERSION);
 	define('DEFAULT_NET', 'gnutella2');
 	define('OLD_NET', 'gnutella');
@@ -126,7 +126,7 @@
 			$net = OLD_NET; // Set net to gnutella if no net parameter
 		}
 	}
-	$config['Host']['Age'] = isset($config['Host']['Age']) ? $config['Host']['Age'] : 28800;
+	$config['Host']['Age'] = isset($config['Host']['Age']) ? $config['Host']['Age'] : 86400;
 	$config['Host']['Output'] = isset($config['Host']['Output']) ? $config['Host']['Output'] : 30;
 	$config['Host']['Testing'] = isset($config['Host']['Testing']) ? $config['Host']['Testing'] : 1;
 	$config['URL']['Age'] = isset($config['URL']['Age']) ? $config['URL']['Age'] : 604800;
@@ -307,7 +307,7 @@
 					@list($ip, $time, $client, $xnet) = explode('|', trim(fgets($file)));
 					$xnet = trim($xnet) == '' ? DEFAULT_NET : $xnet; // Assume gnutella2 if no network
 					$age = $now - $time;
-					if($age < $config['Host']['Age'] && preg_match(IP_REGEX, $ip) && isset($counts[$xnet]) && $counts[$xnet] < $config['Host']['Output']) {
+					if($age < $config['Host']['Age'] && preg_match(IP_REGEX, $ip) && isset($counts[$xnet]) && $counts[$xnet] < $config['Host']['Output'] - 1) {
 						list($ip, $port) = explode(':', $ip);
 						if(!in_array($ip, $ips)) { // Do not allow duplicate IPs
 							$ips[] = $ip;
