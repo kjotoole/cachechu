@@ -21,18 +21,21 @@ II. File List
     o   readme.txt                     - this file
 
 III. Requirements
+    1.  First time users should remove .sample from config.ini.sample.
+        Remove .sample from urls.dat.sample files, if you want to start off with default caches.
 
-    1.  The following paths require write (and read) access:
+    2.  The following paths require write (and read) access:
 
       data/<network>/bans.dat
       data/<network>/hosts.dat
       data/<network>/urls.dat
       data/<network>/stats.dat (if stat logging enabled)
       data/<network>/start.dat (if stat logging enabled)
+      data/update.dat (if update notification enabled)
 
         Replace <network> by the networks you support.
 
-    2.  The following paths MAY require write (and read) access,
+    3.  The following paths MAY require write (and read) access,
         depending on configuration:
 
       data/bans.dat
@@ -41,16 +44,16 @@ III. Requirements
       data/stats.dat (if stat logging enabled)
       data/start.dat (if stat logging enabled)
 
-    3.  The following file should be set as the directory index:
+    4.  The following file should be set as the directory index:
 
       index.php
 
-    4.  To disable stat logging, the following configuration should be present:
+    5.  To disable stat logging, the following configuration should be present:
 
       [Stats]
       Enable = 0;
 
-    5.  If your host cannot test clients on a port other than 80,
+    6.  If your host cannot test clients on a port other than 80,
         set [Host] Testing in config.ini to 0.
 
 IV. Web interface

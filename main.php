@@ -1,8 +1,15 @@
 <?php
 	if(!isset($config)): die(); endif;
 	
+	define('UPDATE_DOMAIN', 'cachechu.googlecode.com');
+	define('UPDATE_PATH', '/svn/VERSION');	
 	define('GEOIP_PATH', 'geoip/geoip.php');
 	define('GEOIP_DATA_PATH', 'geoip/GeoIP.dat');
+	
+	$config['Path']['Update'] = isset($config['Path']['Update']) ? $config['Path']['Update'] : 'data/update.dat';
+	$config['Interface']['Info'] = isset($config['Interface']['Info']) ? $config['Interface']['Info'] : 1;
+	$config['Interface']['StatsLimit'] = isset($config['Interface']['StatsLimit']) ? $config['Interface']['StatsLimit'] : 10;
+	$config['Interface']['Update'] = isset($config['Interface']['Update']) ? $config['Interface']['Update'] : 1;
 	
 	function get_flag($ip) {
 		global $geoip;
@@ -44,6 +51,38 @@
 		<a href="http://code.google.com/p/cachechu/"
 			title="Cachechu Projects Page">Cachechu GWebCache</a>
 	</h1>
+	
+  <?php
+		// Do not show update notification for test versions
+		if(substr(VERSION, 0, 1) != 'R' && $config['Interface']['Update']):
+			$config['Path']['Update'] = isset($config['Path']['Update']) ? $config['Path']['Update'] : 'data/update.dat';
+			if(file_exists($config['Path']['Update'])) {
+				$age = $now - @filemtime($config['Path']['Update']);
+			} else {
+				$dir = dirname($config['Path']['Update']);
+				if(!file_exists($dir)) {
+					@mkdir($dir, DIR_FLAGS, TRUE); // Create directory if it does not exist
+				}
+				$age = $config['URL']['Age'];
+			}
+			if($age >= $config['URL']['Age']) {
+				$domain = UPDATE_DOMAIN;
+				$contents = trim(download_data(UPDATE_DOMAIN, 80, get_input(UPDATE_PATH, UPDATE_DOMAIN), TRUE));
+				if($contents != '') { @file_put_contents($config['Path']['Update'], $contents); }
+			}
+			if(file_exists($config['Path']['Update'])):
+				$latest = substr(trim(@file_get_contents($config['Path']['Update'])), 0, 5);
+				if($latest != '' && $latest != VERSION): ?>
+					<div class="update">
+						<a href="http://code.google.com/p/cachechu/downloads/list">
+							GWebCache is out of date. Update to Cachechu <?php echo $latest; ?>.
+						</a>
+					</div>
+				<?php
+				endif;
+			endif;
+		endif;
+  ?>
 	
 	<?php if($config['Interface']['Info']): ?>
 	<?php date_default_timezone_set('UTC'); ?>
