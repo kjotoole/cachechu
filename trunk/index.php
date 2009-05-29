@@ -14,6 +14,46 @@
 	// You should have received a copy of the GNU General Public License
 	// along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+	// Request data from a host asynchronously
+	function download_data($address, $port, $input, $web) {
+		ini_set('user_agent', AGENT);
+		$socket = stream_socket_client("tcp://$address:$port", $errno, $errstr, 10, STREAM_CLIENT_CONNECT|STREAM_CLIENT_ASYNC_CONNECT);
+		stream_set_blocking($socket, 0); // Non-blocking IO
+		$read = null;
+		$write = array($socket);
+		$except = null;
+		$timeout = time() + 10; // Script should time out after 10 seconds
+		while($input && time() < $timeout) {
+			$write[0] = $socket;
+			if(stream_select($read, $write, $except, 0, 100000)) { // Return after 0.1 seconds
+				$written = fwrite($socket, $input, strlen($input));
+				$input = substr($input, $written);
+			}
+		}
+		$output = '';
+		$read = array($socket);
+		$write = null;
+		$except = null;
+		while (!feof($socket) && time() < $timeout) {
+			$read[0] = $socket;
+			if(stream_select($read, $write, $except, 0, 100000)) {
+				$output .= fread($socket, 8192);
+			}
+		}
+		fclose($socket);
+		if($web) {
+			$pos = strpos($output, "\r\n\r\n");
+			$output = $pos !== FALSE ? trim(substr($output, $pos + 4)) : '';
+		}
+		return $output;
+	}
+	
+	// Format Web request
+	function get_input($query, $domain) {
+		return "GET $query HTTP/1.0\r\nHost: $domain\r\nConnection: Close\r\n\r\n";
+	}
+	
+	// Get valid URL or return false on error
 	function get_url($url) {
 		$url = urldecode(rtrim(preg_replace(INDEX_REGEX, '', $url), '/'));
 		if(!preg_match('/nyuc?d\\.net/s', $url) && preg_match(URL_REGEX, $url, $match)) {
@@ -24,13 +64,13 @@
 		}
 	}
 
-	define('VERSION', 'R40');
+	define('VERSION', 'R41');
 	define('AGENT', 'Cachechu ' . VERSION);
 	define('IP_REGEX', '/\\A((?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)):(\\d+)\\z/');
 	define('INDEX_REGEX', '/(?:default|index)\\.(?:aspx?|cfm|cgi|htm|html|jsp|php)$/iD');
 	define('OUTPUT_REGEX', '%\\A(?:(?:(?:H\\|(?:[0-9]{1,3}\\.){3}[0-9]{1,3}.*):\\d+\\|(\\d+).*|(?:U\\|http://.+)|(?:[A-GI-TV-Z]\\|.*)))\\z%i');
 	define('URL_REGEX', '/\\Ahttp:\/\/(?P<domain>[-A-Z0-9.]+)(?::(?P<port>[0-9]+))?(?P<file>\/[-A-Z0-9+&@#\/%=~_!:,.;]*)?\\z/i');
-	define('MAX_AGE', 259200); // If any hosts are older than 3 days, the cache is marked as BAD
+	define('MAX_HOST_AGE', 259200); // If any hosts are older than 3 days, the cache is marked as BAD
 	define('CONFIG_PATH', 'config/config.ini');
 	$config = file_exists(CONFIG_PATH) ? @parse_ini_file(CONFIG_PATH, TRUE) : array();
 	$config['Host']['Age'] = isset($config['Host']['Age']) ? $config['Host']['Age'] : 28800;
@@ -134,20 +174,12 @@
 	if($update && $host) {
 		$error = TRUE;
 		if(strpos($host, $remote_ip) !== FALSE && preg_match(IP_REGEX, $host)) {
-			if($config['Host']['Testing']) {
+			if(FALSE && $config['Host']['Testing']) {
 				list($ip, $port) = explode(':', $host);
-				$socket = @fsockopen($ip, $port, $errno, $errstr, 5);
-				if($socket) {
-					if(@fwrite($socket, "GNUTELLA CONNECT/0.6\r\n\r\n") !== FALSE) {
-						stream_set_timeout($socket, 5);
-						if(stream_get_contents($socket, 12) === 'GNUTELLA/0.6') {
-							$error = FALSE;
-						}
-					}
-					fclose($socket);
-				}
+				$output = trim(download_data($ip, $port, "GNUTELLA CONNECT/0.6\r\n\r\n", FALSE));
+				if($output != '') { $error = FALSE; }
 			} else {
-				$error = FALSE;
+				$error = FALSE; // Assume host is good if testing is off
 			}
 		}
 		if(!$error) {
@@ -211,49 +243,45 @@
 		$test_status = '';
 		if(preg_match(URL_REGEX, $test_url, $match)) {
 			$error = NULL;
+			$contents = '';
+			$test_client = '';
+			$port = isset($match['port']) && $match['port'] ? intval($match['port']) : 80;
+			$file = $match['file'];
 			$domain = $match['domain'];
 			$ip = gethostbyname($domain);
-			$socket = NULL;
 			if($ip != $domain) { // If gethostbyname fails, it will return the tested domain
 				$error = TRUE;
-				$port = isset($match['port']) && $match['port'] ? $match['port'] : 80;
-				ini_set('user_agent', AGENT);
-				$socket = @fsockopen($domain, $port, $errno, $errstr, 5);
-			}
-			if($socket) {
-				$file = isset($match['file']) ? $match['file'] : '/'; // No need to URL encode
-				$query = "$file?get=1&net=gnutella2&client=TEST&version=" . AGENT;
-				if($config['Cache']['Advertise']) {
+				$query = "$file?ping=1&net=$net&client=TEST&version=" . urlencode(AGENT);
+				$contents .= download_data($domain, $port, get_input($query, $domain), TRUE) . "\n";
+				if($contents) {
+					$query = "$file?get=1&net=$net&client=TEST&version=" . urlencode(AGENT);
+					$contents .= download_data($domain, $port, get_input($query, $domain), TRUE) . "\n";
+				}
+				if($contents && $config['Cache']['Advertise']) {
 					$current_url = 'http://' . $_SERVER['SERVER_NAME'];
 					if($_SERVER['SERVER_PORT'] != 80) { $current_url .= ':' . $_SERVER['SERVER_PORT']; }
-					$current_url = get_url($current_url . $_SERVER['PHP_SELF']);
-					$query .= '&update=1&url=' . urlencode($current_url);
+					$current_url = urlencode(get_url($current_url . $_SERVER['PHP_SELF']));
+					$query = "$file?update=1&url=$current_url&net=$net&client=TEST&version=" . urlencode(AGENT);
+					$contents .= download_data($domain, $port, get_input($query, $domain), TRUE);
 				}
-				$out = "GET $query HTTP/1.0\r\n";
-				$out .= "Host: $domain\r\n";
-				$out .= "Connection: Close\r\n\r\n";
-				$response = '';
-				if(@fwrite($socket, $out) !== FALSE) {
-					stream_set_timeout($socket, 5);
-					$info = stream_get_meta_data($socket);
-					while (!feof($socket) && !$info['timed_out']) {
-						$response .= fgets($socket, 4096);
-						$info = stream_get_meta_data($socket);
+			}
+			$contents = trim($contents);
+			if($contents) { $error = FALSE; }
+			// Validate the GWebCache output
+			$lines = explode("\n", $contents);
+			foreach($lines as $line){
+				@list($field1, $field2, $field3) = explode('|', trim($line));
+				if(strtoupper($field1) == 'I') {
+					if(strtolower($field2) == 'pong') {
+						$test_client = substr(trim($field3), 0, 50);
 					}
-				}
-				fclose($socket);
-				$pos = strpos($response, "\r\n\r\n");
-				if($pos !== FALSE) {
-					$contents = trim(substr($response, $pos + 4));
-					if($contents) { $error = FALSE; }
-					$lines = explode("\n", $contents);
-					foreach($lines as $line) {
-						if(!preg_match(OUTPUT_REGEX, $line, $match) || (isset($match[1]) && $match[1] > MAX_AGE)) {
-							$error = TRUE; // Contains invalid output or ancient hosts
-							break;
-						}
-					}
-					if(count($lines) < 2) { $error = true; }
+				} else if(strtoupper($field1) == 'H' && preg_match(IP_REGEX, $field2) && ctype_digit($field3) && $field3 <= MAX_HOST_AGE) {
+				} else if(strtoupper($field1) == 'U' && preg_match(URL_REGEX, $field2) && ctype_digit($field3)) {
+				} else if(strlen($field1) > 5 && substr_compare($field1, 'PONG ', 0, 5, TRUE) == 0) {
+					$test_client = substr(trim(substr($field1, 5)), 0, 50);
+				} else {
+					$error = TRUE;
+					break;
 				}
 			}
 			if(is_null($error) || ($error && $urls[$test_url]['status'] === 'BAD')) {
