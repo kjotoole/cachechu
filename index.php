@@ -24,7 +24,8 @@
 		}
 	}
 
-	define('VERSION', '1.11');
+	define('VERSION', 'R39');
+	define('AGENT', 'Cachechu ' . VERSION);
 	define('CONFIG_PATH', 'config/config.ini');
 	$config = file_exists(CONFIG_PATH) ? @parse_ini_file(CONFIG_PATH, TRUE) : array();
 	$config['Host']['Age'] = isset($config['Host']['Age']) ? $config['Host']['Age'] : 28800;
@@ -122,7 +123,7 @@
 	}
 
 	// Pong!
-	if($ping) { echo 'I|pong|Cachechu ', VERSION, "|gnutella2\n"; }
+	if($ping) { echo 'I|pong|', AGENT, "|gnutella2\n"; }
 
 	// Add host to cache
 	if($update && $host) {
@@ -216,12 +217,12 @@
 			if($ip != $domain) { // If gethostbyname fails, it will return the tested domain
 				$error = TRUE;
 				$port = isset($match['port']) && $match['port'] ? $match['port'] : 80;
-				ini_set('user_agent', 'Cachechu');
+				ini_set('user_agent', AGENT);
 				$socket = @fsockopen($domain, $port, $errno, $errstr, 5);
 			}
 			if($socket) {
 				$file = isset($match['file']) ? $match['file'] : '/'; // No need to URL encode
-				$query = "$file?get=1&net=gnutella2&client=TEST&version=Cachechu";
+				$query = "$file?get=1&net=gnutella2&client=TEST&version=" . AGENT;
 				if($config['Cache']['Advertise']) {
 					$current_url = 'http://' . $_SERVER['SERVER_NAME'];
 					if($_SERVER['SERVER_PORT'] != 80) { $current_url .= ':' . $_SERVER['SERVER_PORT']; }
