@@ -1,15 +1,31 @@
-body,table,h1,form{margin:0;padding:0;font-family:Tahoma,Arial,sans-serif;}
-body{background:white;color:#555753;text-align:center;}
+body,table,h1,h2,form,ul,li{margin:0;padding:0;font-family: Arial, Helvetica, sans-serif;}
+body,tfoot{background:white;color:#555753;text-align:center;}
 a{color:#3465a4;}
+a:visited{color:#75507b;}
 a:hover{color:#c00;}
-h1{font-size:1.5em;padding:0.75em 0;}
-form{padding-bottom:1em;}
-table{border-collapse:collapse;margin:0 auto;border:1px solid #2e3436;}
-thead, tr.caption{background:#2e3436;color:white;}
+col.stats{width:10%;border-left:1px solid #d3d7cf;}
+h1{font-size:1.5em;padding:0.5em 0;}
+h2{font-size:1em;background:#555753;}
+h2,table{border:1px solid #2e3436;}
+table{width:100%;margin-bottom:1.5em;border-collapse:collapse;}
+thead,tr.caption{background:#2e3436;color:white;}
+th,td{text-align:left;}
+th,td,h2{padding:0.3em 0.5em;}
 tr.caption th{text-align:center;}
-tbody th{text-align:right;}
-th, td{text-align:left;padding:0.25em 0.75em;}
-#footer {background:#2e3436;padding:0.3em 0.5em;margin-top:1em;text-align:center;}
-caption{display:none;}
-#footer,#footer a{color: white;}
+tfoot td{border-top:1px solid #babdb6;}
+tbody th,tbody td{border-top: 1px solid #d3d7cf;}
+tbody th,tfoot td,.stats td,.stats th{text-align:right;}
+#main{margin:0 auto 1em;min-width:40em;max-width:60em;}
+#footer,#navigation{padding:0.3em 0.5em;}
+#footer{background:#2e3436;text-align:center;}
+#footer,#footer a,h2{color:white;}
+#navigation{list-style:none;border-top:1px solid #2e3436;}
+#navigation li{padding:0 1em;display:inline;font-weight:bold;}
+.flags{width:11px;}
+.ips{width:9em;}
+.ports{width:4em;}
+.ages{width:5em;}
+.timestamps{width:10em;}
+.empty{font-weight:bold;}
+.odd{background:#fff;}
 .even{background:#eeeeec;}
