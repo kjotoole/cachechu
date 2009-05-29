@@ -15,7 +15,7 @@
 	// along with this program.  If not, see <http://www.gnu.org/licenses/>.
 	
 	ob_start(); // Enable output buffering
-	define('VERSION', 'R45');
+	define('VERSION', 'R47');
 	define('AGENT', 'Cachechu ' . VERSION);
 	define('DEFAULT_NET', 'gnutella2');
 	define('OLD_NET', 'gnutella');
@@ -28,6 +28,7 @@
 	define('SLASH_REGEX', '%^[^.]+[^/]$%');
 	define('MAX_HOST_AGE', 259200); // If any hosts are older than 3 days, the cache is marked as BAD
 	define('CONFIG_PATH', 'config/config.ini');
+	define('DIR_FLAGS', 0750); // Flags to use when creating directories
 	
 	// Request data from a host asynchronously
 	function download_data($address, $port, $input, $web) {
@@ -139,8 +140,6 @@
 	$config['Path']['Stats'] = isset($config['Path']['Stats']) ? $config['Path']['Stats'] : 'data/stats.dat';
 	$config['Path']['Start'] = isset($config['Path']['Start']) ? $config['Path']['Start'] : 'data/start.dat';
 	$config['Interface']['Show'] = isset($config['Interface']['Show']) ? $config['Interface']['Show'] : 1;
-	$config['Interface']['Info'] = isset($config['Interface']['Info']) ? $config['Interface']['Info'] : 1;
-	$config['Interface']['StatsLimit'] = isset($config['Interface']['StatsLimit']) ? $config['Interface']['StatsLimit'] : 10;
 	$config['Stats']['Enable'] = isset($config['Stats']['Enable']) ? $config['Stats']['Enable'] : TRUE;
 	
 	if(!empty($_GET) && $page == '') {
@@ -161,7 +160,7 @@
 			if(!$start_exists) {
 				$dir = dirname($config['Path']['Start']);
 				if(!file_exists($dir)) {
-					@mkdir($dir, 0750, TRUE); // Create directory if it does not exist
+					@mkdir($dir, DIR_FLAGS, TRUE); // Create directory if it does not exist
 				}
 				// Add the start time for statistics
 				@file_put_contents($config['Path']['Start'], "$now|$net|\r\n");
@@ -170,7 +169,7 @@
 			if(!$stats_exists) {
 				$dir = dirname($config['Path']['Stats']);
 				if(!file_exists($dir)) {
-					@mkdir($dir, 0750, TRUE); // Create directory if it does not exist
+					@mkdir($dir, DIR_FLAGS, TRUE); // Create directory if it does not exist
 				}
 				@touch($config['Path']['Stats']);
 				$stats_exists = file_exists($config['Path']['Stats']);
@@ -246,7 +245,7 @@
 		if(!$exists) {
 			$dir = dirname($config['Path']['Ban']);
 			if(!file_exists($dir)) {
-				@mkdir($dir, 0750, TRUE); // Create directory if it does not exist
+				@mkdir($dir, DIR_FLAGS, TRUE); // Create directory if it does not exist
 			}
 		}
 		$bans = $exists ? @unserialize(file_get_contents($config['Path']['Ban'])) : array();
@@ -298,7 +297,7 @@
 			if(!file_exists($config['Path']['Host'])) {
 				$dir = dirname($config['Path']['Host']);
 				if(!file_exists($dir)) {
-					@mkdir($dir, 0750, TRUE); // Create directory if it does not exist
+					@mkdir($dir, DIR_FLAGS, TRUE); // Create directory if it does not exist
 				}
 				@touch($config['Path']['Host']); // Create new host file
 			}
@@ -441,7 +440,7 @@
 		if(!file_exists($config['Path']['URL'])) {
 			$dir = dirname($config['Path']['URL']);
 			if(!file_exists($dir)) {
-				@mkdir($dir, 0750, TRUE); // Create directory if it does not exist
+				@mkdir($dir, DIR_FLAGS, TRUE); // Create directory if it does not exist
 			}
 		}
 		
