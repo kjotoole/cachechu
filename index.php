@@ -15,13 +15,14 @@
 	// along with this program.  If not, see <http://www.gnu.org/licenses/>.
 	
 	ob_start(); // Enable output buffering
-	define('VERSION', 'R51');
+	define('VERSION', 'R52');
 	define('AGENT', 'Cachechu ' . VERSION);
 	define('DEFAULT_NET', 'gnutella2');
 	define('OLD_NET', 'gnutella');
 	define('NET_REPLACE', '<network>');
 	define('BLOCK_REGEX', '%^Mozilla/4\\.0$|^CoralWebPrx.*$|^FTWebCache.*$%');
 	define('IP_REGEX', '/\\A((?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)):([1-9][0-9]{0,4})\\z/');
+	define('TRAIL_REGEX', '%(?<=\\.(?:asp|cfm|cgi|htm|jsp|php))/.*$%i');
 	define('INDEX_REGEX', '/(?:default|index)\\.(?:aspx?|cfm|cgi|htm|html|jsp|php)$/iD');
 	define('OUTPUT_REGEX', '%\\A(?:(?:(?:H\\|(?:[0-9]{1,3}\\.){3}[0-9]{1,3}.*):\\d+\\|(\\d+).*|(?:U\\|http://.+)|(?:[A-GI-TV-Z]\\|.*)))\\z%i');
 	define('URL_REGEX', '/\\Ahttp:\/\/(?P<domain>[-A-Z0-9.]+)(?::(?P<port>[0-9]+))?(?P<file>\/[-A-Z0-9+&@#\/%=~_!:,.;]*)?\\z/i');
@@ -71,23 +72,24 @@
 	
 	// Get valid URL or return false on error
 	function get_url($url) {
-		$url = urldecode(preg_replace(INDEX_REGEX, '', $url));
-		$new_url = rtrim($url, '/');
-		if($new_url != $url) { $url = $new_url . '/'; }
+		$url = preg_replace(INDEX_REGEX, '', urldecode($url)); // Removes index.php from URL
+		$url = preg_replace(TRAIL_REGEX, '', $url); // Removes trailing garbage
+		$new_url = rtrim($url, '/'); // Removes all trailing slashes
+		if($new_url != $url) { $url = $new_url . '/'; } // Adds trailing slash
 		if(!preg_match('/nyuc?d\\.net/s', $url) && preg_match(URL_REGEX, $url, $match)) {
 			if($match['port']) {
 				$port = ltrim($match['port'], '0');
-				if($port >= 1 && $port <= 65535) {
-					$replace = $port == 80 ? '' : ':' . $port;
+				if($port >= 1 && $port <= 65535) { // Must have valid port
+					$replace = $port == 80 ? '' : ':' . $port; // Remove port 80 from URL
 					$url = str_replace(':' . $match['port'], $replace, $url);
 				} else {
-					$url = FALSE;
+					$url = FALSE; // Port out of range
 				}
 			}
-			$url = str_replace($match['domain'], strtolower($match['domain']), $url);
+			$url = str_replace($match['domain'], strtolower($match['domain']), $url); // Domain should be lowercase
 			return $url;
 		} else {
-			return FALSE;
+			return FALSE; // URL is invalid or a Coral Cache
 		}
 	}
 	
@@ -126,21 +128,21 @@
 			$net = OLD_NET; // Set net to gnutella if no net parameter
 		}
 	}
-	$config['Host']['Age'] = isset($config['Host']['Age']) ? $config['Host']['Age'] : 86400;
-	$config['Host']['Output'] = isset($config['Host']['Output']) ? $config['Host']['Output'] : 30;
-	$config['Host']['Testing'] = isset($config['Host']['Testing']) ? $config['Host']['Testing'] : 1;
-	$config['URL']['Age'] = isset($config['URL']['Age']) ? $config['URL']['Age'] : 604800;
-	$config['URL']['Output'] = isset($config['URL']['Output']) ? $config['URL']['Output'] : 30;
-	$config['URL']['TestAge'] = isset($config['URL']['TestAge']) ? $config['URL']['TestAge'] : 86400;
+	$config['Host']['Age']        = isset($config['Host']['Age']) ? $config['Host']['Age'] : 86400;
+	$config['Host']['Output']     = isset($config['Host']['Output']) ? $config['Host']['Output'] : 30;
+	$config['Host']['Testing']    = isset($config['Host']['Testing']) ? $config['Host']['Testing'] : 1;
+	$config['URL']['Age']         = isset($config['URL']['Age']) ? $config['URL']['Age'] : 604800;
+	$config['URL']['Output']      = isset($config['URL']['Output']) ? $config['URL']['Output'] : 30;
+	$config['URL']['TestAge']     = isset($config['URL']['TestAge']) ? $config['URL']['TestAge'] : 86400;
 	$config['Cache']['Advertise'] = isset($config['Cache']['Advertise']) ? $config['Cache']['Advertise'] : 1;
-	$config['Cache']['BanTime'] = isset($config['Cache']['BanTime']) ? $config['Cache']['BanTime'] : 3600;
-	$config['Path']['Ban'] = isset($config['Path']['Ban']) ? $config['Path']['Ban'] : 'data/bans.dat';
-	$config['Path']['Host'] = isset($config['Path']['Host']) ? $config['Path']['Host'] : 'data/hosts.dat';
-	$config['Path']['URL'] = isset($config['Path']['URL']) ? $config['Path']['URL'] : 'data/urls.dat';
-	$config['Path']['Stats'] = isset($config['Path']['Stats']) ? $config['Path']['Stats'] : 'data/stats.dat';
-	$config['Path']['Start'] = isset($config['Path']['Start']) ? $config['Path']['Start'] : 'data/start.dat';
-	$config['Interface']['Show'] = isset($config['Interface']['Show']) ? $config['Interface']['Show'] : 1;
-	$config['Stats']['Enable'] = isset($config['Stats']['Enable']) ? $config['Stats']['Enable'] : TRUE;
+	$config['Cache']['BanTime']   = isset($config['Cache']['BanTime']) ? $config['Cache']['BanTime'] : 3600;
+	$config['Path']['Ban']        = isset($config['Path']['Ban']) ? $config['Path']['Ban'] : 'data/bans.dat';
+	$config['Path']['Host']       = isset($config['Path']['Host']) ? $config['Path']['Host'] : 'data/hosts.dat';
+	$config['Path']['URL']        = isset($config['Path']['URL']) ? $config['Path']['URL'] : 'data/urls.dat';
+	$config['Path']['Stats']      = isset($config['Path']['Stats']) ? $config['Path']['Stats'] : 'data/stats.dat';
+	$config['Path']['Start']      = isset($config['Path']['Start']) ? $config['Path']['Start'] : 'data/start.dat';
+	$config['Interface']['Show']  = isset($config['Interface']['Show']) ? $config['Interface']['Show'] : 1;
+	$config['Stats']['Enable']    = isset($config['Stats']['Enable']) ? $config['Stats']['Enable'] : TRUE;
 	
 	if(!empty($_GET) && $page == '') {
 		header('Content-Type: text/plain');
@@ -149,9 +151,9 @@
 			die("ERROR: Network Not Supported\n");
 		}
 		// Replace <network> for $net in paths
-		$config['Path']['Ban'] = str_replace(NET_REPLACE, $net, $config['Path']['Ban']);
-		$config['Path']['Host'] = str_replace(NET_REPLACE, $net, $config['Path']['Host']);
-		$config['Path']['URL'] = str_replace(NET_REPLACE, $net, $config['Path']['URL']);
+		$config['Path']['Ban']   = str_replace(NET_REPLACE, $net, $config['Path']['Ban']);
+		$config['Path']['Host']  = str_replace(NET_REPLACE, $net, $config['Path']['Host']);
+		$config['Path']['URL']   = str_replace(NET_REPLACE, $net, $config['Path']['URL']);
 		$config['Path']['Stats'] = str_replace(NET_REPLACE, $net, $config['Path']['Stats']);
 		$config['Path']['Start'] = str_replace(NET_REPLACE, $net, $config['Path']['Start']);
 		if($config['Stats']['Enable']) { // Log stats
