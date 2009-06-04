@@ -10,6 +10,7 @@
 	$config['Interface']['Info'] = isset($config['Interface']['Info']) ? $config['Interface']['Info'] : 1;
 	$config['Interface']['StatsLimit'] = isset($config['Interface']['StatsLimit']) ? $config['Interface']['StatsLimit'] : 10;
 	$config['Interface']['Update'] = isset($config['Interface']['Update']) ? $config['Interface']['Update'] : 1;
+	$is_only_mute = (in_array(MUTE, $config['Network']['Support']) && count($config['Network']['Support']) == 1);
 	
 	function get_flag($ip) {
 		global $geoip;
@@ -91,7 +92,9 @@
 		<li><?php if($page == 'stats'): ?>Stats<?php else: ?><a href="?page=stats">Stats</a><?php endif; ?></li>
 		<?php endif; ?>
 		<li><?php if($page == 'hosts'): ?>Hosts<?php else: ?><a href="?page=hosts">Hosts</a><?php endif; ?></li>
+		<?php if(!$is_only_mute): ?>
 		<li><?php if($page == 'services'): ?>Services<?php else: ?><a href="?page=services">Services</a><?php endif; ?></li>
+		<?php endif; ?>
 	</ul>
 
 	<?php if($page == 'stats' && $config['Stats']['Enable']): ?>
@@ -260,9 +263,10 @@
 	</table>
 	<?php endforeach; ?>
 	</div>
-	<?php elseif($page == 'services'): ?>
+	<?php elseif($page == 'services' && !$is_only_mute): ?>
 	<div id="main">
 	<?php foreach($config['Network']['Support'] as $network): ?>
+	<?php if($network != MUTE): ?>
 	<h2><?php echo ucwords($network); ?> Services</h2>
 	<table summary="Current <?php echo ucwords($network); ?> services in cache">
 		<?php if($geoip): ?><col class="flags"><?php endif; ?>
@@ -284,12 +288,12 @@
 				<td colspan="<?php echo $geoip ? 5 : 4 ?>">
 					<form method="get" action="">
 						<div>
-							<?php if(!($network == OLD_NET)): ?>
+							<?php if($network != GNUTELLA): ?>
 							<input type="hidden" name="net" value="<?php echo $network; ?>">
 							<input type="hidden" name="update" value="1">
 							<?php endif; ?>
 							<input type="hidden" name="client" value="CACH">
-							<input type="hidden" name="client" value="ECHU">
+							<input type="hidden" name="version" value="ECHU">
 							<label for="<?php echo $network; ?>url"><?php echo ucwords($network); ?> URL:</label>
 							<input type="text" name="url" id="<?php echo $network; ?>url" size="50">
 							<input type="submit" value="Add">
@@ -330,6 +334,7 @@
 			?>
 		</tbody>
 	</table>
+	<?php endif; ?>
 	<?php endforeach; ?>
 	</div>
 	<?php endif; ?>
