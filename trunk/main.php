@@ -282,7 +282,7 @@
 		<tfoot>
 			<tr>
 				<td colspan="<?php echo $geoip ? 5 : 4 ?>">
-					<form method="get" action=".">
+					<form method="get" action="">
 						<div>
 							<?php if(!($network == OLD_NET)): ?>
 							<input type="hidden" name="net" value="<?php echo $network; ?>">
