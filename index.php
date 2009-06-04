@@ -15,10 +15,11 @@
 	// along with this program.  If not, see <http://www.gnu.org/licenses/>.
 	
 	ob_start(); // Enable output buffering
-	define('VERSION', 'R53');
+	define('VERSION', 'R55');
 	define('AGENT', 'Cachechu ' . VERSION);
 	define('DEFAULT_NET', 'gnutella2');
-	define('OLD_NET', 'gnutella');
+	define('MUTE', 'mute');
+	define('GNUTELLA', 'gnutella');
 	define('NET_REPLACE', '<network>');
 	define('BLOCK_REGEX', '%^Mozilla/4\\.0$|^CoralWebPrx.*$|^FTWebCache.*$%');
 	define('IP_REGEX', '/\\A((?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)):([1-9][0-9]{0,4})\\z/');
@@ -107,7 +108,7 @@
 	$ping      = isset($_GET['ping']) ? $_GET['ping'] : '';
 	$update    = isset($_GET['update']) ? $_GET['update'] : '';
 	$url       = isset($_GET['url']) ? trim($_GET['url']) : '';
-	// GWC1 requests (Used only by gnutella)
+	// GWC1 requests (Used only by gnutella and mute)
 	$hostfile  = isset($_GET['hostfile']) ? $_GET['hostfile'] : '';
 	$urlfile   = isset($_GET['urlfile']) ? $_GET['urlfile'] : '';
 	$statfile  = isset($_GET['statfile']) ? $_GET['statfile'] : '';
@@ -124,8 +125,14 @@
 			$update = $host || $url ? 1 : 0;
 			$is_new = FALSE;
 		}
-		if(in_array(OLD_NET, $config['Network']['Support'])) {
-			$net = OLD_NET; // Set net to gnutella if no net parameter
+		if(strtolower($vendor) == MUTE) {
+			$client = "$vendor $version";
+			$old_net = MUTE;
+		} else {
+			$old_net = GNUTELLA;
+		}
+		if(in_array($old_net, $config['Network']['Support'])) {
+			$net = $old_net; // Set net to gnutella or mute if no net parameter
 		}
 	}
 	$config['Host']['Age']        = isset($config['Host']['Age']) ? $config['Host']['Age'] : 86400;
@@ -357,6 +364,7 @@
 	}
 	
 	if($update && $url) {
+		if($net == MUTE) { die("I|update|WARNING|URL Adding Disabled\n"); }
 		$test_urls = array();
 		$urls = array();
 		$lines = file_exists($config['Path']['URL']) ? file($config['Path']['URL']) : array();
@@ -509,8 +517,12 @@
 		// Output URLs
 		$count = 0;
 		if(($get && $is_new) || ($urlfile && !$is_new)) {
-			$lines = file_exists($config['Path']['URL']) ? file($config['Path']['URL']) : array();
-			shuffle($lines);
+			if(file_exists($config['Path']['URL']) && $net != MUTE) {
+				$lines = @file($config['Path']['URL']);
+				shuffle($lines);
+			} else {
+				$lines = array();
+			}
 			foreach($lines as $line) {
 				list($url, $time, $status, $ip, $xnet) = explode('|', $line);
 				$xnet = trim($xnet) == '' ? DEFAULT_NET : $xnet;
