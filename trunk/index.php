@@ -15,10 +15,12 @@
 	// along with this program.  If not, see <http://www.gnu.org/licenses/>.
 	
 	ob_start(); // Enable output buffering
-	define('VERSION', 'R55');
+	define('VERSION', 'R58');
 	define('AGENT', 'Cachechu ' . VERSION);
 	define('DEFAULT_NET', 'gnutella2');
 	define('MUTE', 'mute');
+	define('MUTE_REGEX', '/mute(?!lla)/i');
+	define('SANITIZE_REGEX', '[|\\r\\n]');
 	define('GNUTELLA', 'gnutella');
 	define('NET_REPLACE', '<network>');
 	define('BLOCK_REGEX', '%^Mozilla/4\\.0$|^CoralWebPrx.*$|^FTWebCache.*$%');
@@ -71,6 +73,11 @@
 		return "GET $query HTTP/1.0\r\nHost: $domain\r\nConnection: Close\r\n\r\n";
 	}
 	
+	// Sanitizes input and makes usable for file
+	function sanitize($text) {
+		return trim(preg_replace(SANITIZE_REGEX, '', substr($text, 0, 50)));
+	}
+	
 	// Get valid URL or return false on error
 	function get_url($url) {
 		$url = preg_replace(INDEX_REGEX, '', urldecode($url)); // Removes index.php from URL
@@ -100,8 +107,8 @@
 	$vendor    = isset($_GET['client']) ? ucwords(strtolower($_GET['client'])) : '';
 	$version   = isset($_GET['version']) ? $_GET['version'] : '';
 	$client    = isset($_SERVER['HTTP_USER_AGENT']) ? $_SERVER['HTTP_USER_AGENT'] : '';
-	$client    = trim(preg_replace('[|\\r\\n]', '', substr($client, 0, 50))); // Sanitize
-	$client    = $client == 'Mozilla/4.0' && $vendor == 'Foxy' ? "$vendor $version" : $client;
+	$client    = sanitize($client);
+	$client    = $client == 'Mozilla/4.0' && $vendor == 'Foxy' ? sanitize("$vendor $version") : $client;
 	$get       = isset($_GET['get']) ? $_GET['get'] : '';
 	$host      = isset($_GET['ip']) ? $_GET['ip'] : '';
 	$net       = isset($_GET['net']) ? strtolower($_GET['net']) : '';
@@ -125,8 +132,8 @@
 			$update = $host || $url ? 1 : 0;
 			$is_new = FALSE;
 		}
-		if(strtolower($vendor) == MUTE) {
-			$client = "$vendor $version";
+		if(strtolower($vendor) == MUTE && preg_match(MUTE_REGEX, $client)) {
+			$client = sanitize("$vendor $version");
 			$old_net = MUTE;
 		} else {
 			$old_net = GNUTELLA;
