@@ -16,7 +16,6 @@ II. File List
     o   data/gnutella2/urls.dat.sample - default list of URLs for Gnutella2 (remove .sample to use)
     o   data/gnutella/urls.dat.sample  - default list of URLs for Gnutella (remove .sample to use)
     o   data/foxy/urls.dat.sample      - default list of URLs for Foxy (remove .sample to use)
-    o   data/mute/urls.dat.sample      - default list of URLs for Mute (remove .sample to use)
     o   config/config.ini.sample       - default config file (remove .sample to use)
     o   readme.txt                     - this file
 
