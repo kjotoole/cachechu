@@ -42,7 +42,7 @@
 	<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
 	<meta name="language" content="en">
 	<meta name="description" content="Cachechu is a GWebCache licensed under the GPL.">
-	<meta name="keywords" content="Gnutella2">
+	<meta name="keywords" content="Gnutella, Gnutella2">
 	<title>Cachechu GWebCache</title>
 	<link href="main.css" rel="stylesheet" type="text/css">
 </head>
