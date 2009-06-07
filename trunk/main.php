@@ -140,6 +140,7 @@
 			}
 		}
 	?>
+	<div class="network">
 	<h2><?php echo ucwords($network); ?> Stats</h2>
 	<table summary="Cache stats for <?php echo ucwords($network); ?>" class="stats">
 		<colgroup>
@@ -207,11 +208,13 @@
 			?>
 		</tbody>
 	</table>
+	</div>
 	<?php endforeach; ?>
 	</div>
 	<?php elseif($page == 'hosts'): ?>
 	<div id="main">
 	<?php foreach($config['Network']['Support'] as $network): ?>
+	<div class="network">
 	<h2><?php echo ucwords($network); ?> Hosts</h2>
 	<table summary="Current <?php echo ucwords($network); ?> hosts in cache">
 		<?php if($geoip): ?><col class="flags"><?php endif; ?>
@@ -261,12 +264,14 @@
 			?>
 		</tbody>
 	</table>
+	</div>
 	<?php endforeach; ?>
 	</div>
 	<?php elseif($page == 'services' && !$is_only_mute): ?>
 	<div id="main">
 	<?php foreach($config['Network']['Support'] as $network): ?>
 	<?php if($network != MUTE): ?>
+	<div class="network">
 	<h2><?php echo ucwords($network); ?> Services</h2>
 	<table summary="Current <?php echo ucwords($network); ?> services in cache">
 		<?php if($geoip): ?><col class="flags"><?php endif; ?>
@@ -334,6 +339,7 @@
 			?>
 		</tbody>
 	</table>
+	</div>
 	<?php endif; ?>
 	<?php endforeach; ?>
 	</div>
