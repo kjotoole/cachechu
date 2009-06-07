@@ -16,7 +16,7 @@
 	
 	$now = time();
 	ob_start(); // Enable output buffering
-	define('VERSION', 'R61');
+	define('VERSION', 'R62');
 	define('AGENT', 'Cachechu ' . VERSION);
 	define('DEFAULT_NET', 'gnutella2');
 	define('MUTE', 'mute');
@@ -470,8 +470,7 @@
 		}
 		
 		// Generate URL output
-		$count = 0;
-		$output = '';		
+		$output = '';
 		foreach($urls as $xurl => $nets) {
 			foreach($nets as $xnet => $values) {
 				$status = $values['Status'];
