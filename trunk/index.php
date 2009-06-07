@@ -14,8 +14,9 @@
 	// You should have received a copy of the GNU General Public License
 	// along with this program.  If not, see <http://www.gnu.org/licenses/>.
 	
+	$now = time();
 	ob_start(); // Enable output buffering
-	define('VERSION', 'R58');
+	define('VERSION', 'R61');
 	define('AGENT', 'Cachechu ' . VERSION);
 	define('DEFAULT_NET', 'gnutella2');
 	define('MUTE', 'mute');
@@ -27,8 +28,7 @@
 	define('IP_REGEX', '/\\A((?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)):([1-9][0-9]{0,4})\\z/');
 	define('TRAIL_REGEX', '%(?<=\\.(?:asp|cfm|cgi|htm|jsp|php))/.*$%i');
 	define('INDEX_REGEX', '/(?:default|index)\\.(?:aspx?|cfm|cgi|htm|html|jsp|php)$/iD');
-	define('OUTPUT_REGEX', '%\\A(?:(?:(?:H\\|(?:[0-9]{1,3}\\.){3}[0-9]{1,3}.*):\\d+\\|(\\d+).*|(?:U\\|http://.+)|(?:[A-GI-TV-Z]\\|.*)))\\z%i');
-	define('URL_REGEX', '/\\Ahttp:\/\/(?P<domain>[-A-Z0-9.]+)(?::(?P<port>[0-9]+))?(?P<file>\/[-A-Z0-9+&@#\/%=~_!:,.;]*)?\\z/i');
+	define('URL_REGEX', '/\\Ahttp:\/\/(?P<domain>[A-Z0-9](?:\\.|(?:(?:[A-Z0-9]|(?:[A-Z0-9][-A-Z0-9]*[A-Z0-9]))\\.)*)[A-Z]{2,})(?::(?P<port>[0-9]+))?(?P<file>\/[A-Z0-9\/.~_-]*)?\\z/i');
 	define('SLASH_REGEX', '%^[^.]+[^/]$%');
 	define('MAX_HOST_AGE', 259200); // If any hosts are older than 3 days, the cache is marked as BAD
 	define('CONFIG_PATH', 'config/config.ini');
@@ -46,7 +46,7 @@
 		while($input && time() < $timeout) {
 			$write[0] = $socket;
 			if(stream_select($read, $write, $except, 0, 100000)) { // Return after 0.1 seconds
-				$written = fwrite($socket, $input, strlen($input));
+				$written = @fwrite($socket, $input, strlen($input));
 				$input = substr($input, $written);
 			}
 		}
@@ -102,8 +102,7 @@
 	}
 	
 	$remote_ip = $_SERVER['REMOTE_ADDR'];
-	$now       = time();
-	$page      = isset($_GET['page']) ? strtolower(trim($_GET['page'])) : '';
+	$data      = isset($_GET['data']) ? strtolower(trim($_GET['data'])) : '';
 	$vendor    = isset($_GET['client']) ? ucwords(strtolower($_GET['client'])) : '';
 	$version   = isset($_GET['version']) ? $_GET['version'] : '';
 	$client    = isset($_SERVER['HTTP_USER_AGENT']) ? $_SERVER['HTTP_USER_AGENT'] : '';
@@ -115,11 +114,15 @@
 	$ping      = isset($_GET['ping']) ? $_GET['ping'] : '';
 	$update    = isset($_GET['update']) ? $_GET['update'] : '';
 	$url       = isset($_GET['url']) ? trim($_GET['url']) : '';
-	// GWC1 requests (Used only by gnutella and mute)
+	$gwcs      = isset($_GET['gwcs']) ? $_GET['gwcs'] : '';
 	$hostfile  = isset($_GET['hostfile']) ? $_GET['hostfile'] : '';
 	$urlfile   = isset($_GET['urlfile']) ? $_GET['urlfile'] : '';
 	$statfile  = isset($_GET['statfile']) ? $_GET['statfile'] : '';
-	$is_new    = TRUE; // Use GWC2 style if true
+	$is_gwc2   = ($get || $update) && !$gwcs; // Use GWC2 style if true
+	if(!$is_gwc2) {
+		$update = $host || $url ? 1 : 0;
+		$get    = 0;
+	}
 	
 	$config = file_exists(CONFIG_PATH) ? @parse_ini_file(CONFIG_PATH, TRUE) : array();
 	if(isset($config['Network']['Support'])) {
@@ -128,10 +131,6 @@
 		$config['Network']['Support'] = array(DEFAULT_NET);
 	}
 	if($net == '') {
-		if(!$get && !$update) { // GWC1 style request
-			$update = $host || $url ? 1 : 0;
-			$is_new = FALSE;
-		}
 		if(strtolower($vendor) == MUTE && preg_match(MUTE_REGEX, $client)) {
 			$client = sanitize("$vendor $version");
 			$old_net = MUTE;
@@ -158,7 +157,7 @@
 	$config['Interface']['Show']  = isset($config['Interface']['Show']) ? $config['Interface']['Show'] : 1;
 	$config['Stats']['Enable']    = isset($config['Stats']['Enable']) ? $config['Stats']['Enable'] : TRUE;
 	
-	if(!empty($_GET) && $page == '') {
+	if(!empty($_GET) && $data == '') {
 		header('Content-Type: text/plain');
 		if(!$vendor || preg_match(BLOCK_REGEX, $client) || !in_array($net, $config['Network']['Support'])) {
 			header('HTTP/1.0 404 Not Found');
@@ -229,7 +228,7 @@
 					if(!$client_exists) {
 						$clients[$client][$net] = array('Gets' => 0, 'Updates' => 0, 'Pings' => 0, 'Requests' => 0);
 					}
-					$clients[$client][$net]['Gets'] += ($is_new && $get) || (!$is_new && $hostfile || $urlfile) ? 1 : 0;
+					$clients[$client][$net]['Gets'] += $get || $hostfile || $urlfile || $gwcs ? 1 : 0;
 					$clients[$client][$net]['Updates'] += $update ? 1 : 0;
 					$clients[$client][$net]['Pings'] += $ping ? 1 : 0;
 					$clients[$client][$net]['Requests'] += 1;
@@ -241,9 +240,9 @@
 							$output .= "|$xnet|\r\n";
 						}
 					}
-					ftruncate($file, 0); // Clear out stats
-					rewind($file); // Go back to start of file
-					fwrite($file, $output); // Recreate stats
+					@ftruncate($file, 0); // Clear out stats
+					@rewind($file); // Go back to start of file
+					@fwrite($file, $output); // Recreate stats
 					if($file) { @flock($file, LOCK_UN); }
 				}
 				if($file) { @fclose($file); }
@@ -291,7 +290,7 @@
 				@mkdir($dir, DIR_FLAGS, TRUE); // Create directory if it does not exist
 			}
 		}
-		$bans = $exists ? @unserialize(file_get_contents($config['Path']['Ban'])) : array();
+		$bans = $exists ? @unserialize(@file_get_contents($config['Path']['Ban'])) : array();
 		if($bans == FALSE) { $bans = array(); } // File could not be unserialized
 		if(isset($bans[$remote_ip]) && $now - $bans[$remote_ip] <= $config['Cache']['BanTime']) {
 			die("ERROR: Client returned too early\n");
@@ -302,19 +301,19 @@
 				unset($bans[$ip]); // Remove old banned hosts
 			}
 		}
-		// Serialize bans list and limit to 100 entries
-		@file_put_contents($config['Path']['Ban'], serialize(array_slice($bans, 0, 100, TRUE)));
-		if($is_new) {
+		// Serialize bans list and limit to 250 entries
+		@file_put_contents($config['Path']['Ban'], serialize(array_slice($bans, 0, 250, TRUE)));
+		if($is_gwc2) {
 			echo "I|update|period|", $config['Cache']['BanTime'], "\n"; // Tell client how long it is banned for
 		}
 	}
 	
 	// Pong!
 	if($ping) {
-		if($is_new) {
+		if($is_gwc2) {
 			echo 'I|pong|', AGENT, '|', implode('-', $config['Network']['Support']), "\n";
-		} else if(!$hostfile && !$urlfile) {
-			die('PONG '. AGENT . "\n"); // Output only PONG GWC1 request
+		} else {
+			echo 'PONG ', AGENT, "\n";
 		}
 	}
 	
@@ -364,27 +363,29 @@
 				@fwrite($file, rtrim($output)); // Recreate hosts
 				@fclose($file); // Unlocks file
 			}
-			echo $is_new ? "I|update|OK\n" : "OK\n";
+			echo $is_gwc2 ? "I|update|OK\n" : "OK\n";
 		} else {
-			echo $is_new ? "I|update|WARNING|Rejected IP\n" : "OK\nWARNING: Rejected IP\n";
+			echo $is_gwc2 ? "I|update|WARNING|Rejected IP\n" : "WARNING: Rejected IP\n";
 		}
 	}
 	
 	if($update && $url) {
-		if($net == MUTE) { die("I|update|WARNING|URL Adding Disabled\n"); }
+		if($net == MUTE) { die($is_gwc2 ? "I|update|WARNING|URL Adding Disabled\n" : "WARNING: URL Adding Disabled\n"); }
 		$test_urls = array();
 		$urls = array();
 		$lines = file_exists($config['Path']['URL']) ? file($config['Path']['URL']) : array();
 		shuffle($lines); // Used to randomize URL testing
+		$bad_count = 0;
 		foreach($lines as $line) {
 			@list($xurl, $time, $status, $ip, $xnet, $xclient) = explode('|', trim($line));
 			$xnet = trim($xnet) == '' ? DEFAULT_NET : $xnet;
 			$xurl = get_url($xurl);
-			if($xurl !== FALSE && !preg_match(BLOCK_REGEX, $xclient)) {
+			if(($bad_count < 1000 || $status != 'BAD') && $xurl !== FALSE && !preg_match(BLOCK_REGEX, $xclient)) {
 				$urls[$xurl][$xnet] = array('Time' => $time, 'Status' => $status, 'IP' => $ip, 'Client' => $xclient);
 				if($xnet == $net && $time === 0 || $now - $time >= $config['URL']['TestAge']) {
 					$test_urls[$xurl] = $status; // Test old URLs
 				}
+				if($status == 'BAD') { ++$bad_count; } // Limit to 1000 bad URLs
 			}
 		}
 		
@@ -412,7 +413,7 @@
 			$ip = gethostbyname($domain);
 			if($ip != $domain) { // If gethostbyname fails, it will return the tested domain
 				$error = TRUE;
-				if($is_new) {
+				if($is_gwc2) {
 					$query = "$file?ping=1&net=$net&client=TEST&version=" . urlencode(AGENT);
 					$contents .= download_data($domain, $port, get_input($query, $domain), TRUE) . "\n";
 					if($contents) {
@@ -430,28 +431,28 @@
 					$query = "$file?ping=1&client=TEST&version=" . urlencode(AGENT);
 					$contents = download_data($domain, $port, get_input($query, $domain), TRUE);
 				}
-			}
-			$contents = trim($contents);
-			if($contents) { $error = FALSE; }
-			// Validate the GWebCache output
-			$lines = explode("\n", $contents);
-			foreach($lines as $line){
-				@list($field1, $field2, $field3) = explode('|', trim($line));
-				if(strtoupper($field1) == 'I') {
-					if(strtolower($field2) == 'pong') {
-						$test_client = substr(trim($field3), 0, 50);
+				$contents = trim($contents);
+				if($contents) { $error = FALSE; }
+				// Validate the GWebCache output
+				$lines = explode("\n", $contents);
+				foreach($lines as $line){
+					@list($field1, $field2, $field3) = explode('|', trim($line));
+					if(strtoupper($field1) == 'I') {
+						if(strtolower($field2) == 'pong') {
+							$test_client = substr(trim($field3), 0, 50);
+						}
+					} else if(strtoupper($field1) == 'H' && preg_match(IP_REGEX, $field2) && ctype_digit($field3) && $field3 <= MAX_HOST_AGE) {
+					} else if(strtoupper($field1) == 'U' && preg_match(URL_REGEX, $field2) && ctype_digit($field3)) {
+					} else if(strlen($field1) > 5 && substr_compare($field1, 'PONG ', 0, 5, TRUE) == 0) {
+						$test_client = substr(trim(substr($field1, 5)), 0, 50);
+					} else {
+						$error = TRUE;
+						break;
 					}
-				} else if(strtoupper($field1) == 'H' && preg_match(IP_REGEX, $field2) && ctype_digit($field3) && $field3 <= MAX_HOST_AGE) {
-				} else if(strtoupper($field1) == 'U' && preg_match(URL_REGEX, $field2) && ctype_digit($field3)) {
-				} else if(strlen($field1) > 5 && substr_compare($field1, 'PONG ', 0, 5, TRUE) == 0) {
-					$test_client = substr(trim(substr($field1, 5)), 0, 50);
-				} else {
-					$error = TRUE;
-					break;
 				}
-			}
-			if($test_client == '' || preg_match(BLOCK_REGEX, $test_client)) {
-				$error = TRUE;
+				if($test_client == '' || preg_match(BLOCK_REGEX, $test_client)) {
+					$error = TRUE;
+				}
 			}
 			// Add or remove URL from cache
 			if(is_null($error) || ($error && isset($urls[$test_url][$net]) && $urls[$test_url][$net]['Status'] === 'BAD')) {
@@ -469,6 +470,7 @@
 		}
 		
 		// Generate URL output
+		$count = 0;
 		$output = '';		
 		foreach($urls as $xurl => $nets) {
 			foreach($nets as $xnet => $values) {
@@ -496,34 +498,33 @@
 		
 		// Output update notice (returns OK on untested URLs)
 		if(isset($urls[$url][$net]) && $urls[$url][$net]['Status'] !== 'BAD') {
-			echo $is_new ? "I|update|OK\n" : ($host ? '' : "OK\n");
+			echo $is_gwc2 ? "I|update|OK\n" : "OK\n";
 		} else {
-			echo $is_new ? "I|update|WARNING|Rejected URL\n" : ($host ? "WARNING: Rejected URL\n" : "OK\nWARNING: Rejected URL\n");
+			echo $is_gwc2 ? "I|update|WARNING|Rejected URL\n" : "WARNING: Rejected URL\n";
 		}
 	}
 	
-	if($get || ($hostfile || $urlfile && !$is_new && !$update)) {
+	if($get || $hostfile || $urlfile || $gwcs) {
 		// Output Hosts
 		$count = 0;
-		if(($get && $is_new) || ($hostfile && !$is_new)) {
+		if($get || $hostfile) {
 			$lines = file_exists($config['Path']['Host']) ? file($config['Path']['Host']) : array();
 			foreach($lines as $line) {
 				list($ip, $time, $client, $xnet) = explode('|', $line);
 				$xnet = trim($xnet) == '' ? DEFAULT_NET : $xnet;
 				$age = $now - $time;
 				if($xnet == $net && $age < $config['Host']['Age'] && $age >= 0) {
-					echo $is_new ? "H|$ip|$age\n" : "$ip\n";
+					echo $is_gwc2 ? "H|$ip|$age\n" : "$ip\n";
 					++$count;
 					if($count >= $config['Host']['Output']) { break; }
 				}
 			}
-			if(!$count && $is_new) { echo "I|NO-HOSTS\n"; }
-			if($hostfile && !$is_new) { die(); } // Output only hosts for old style request
+			if(!$count && $is_gwc2) { echo "I|NO-HOSTS\n"; }
 		}
 		
 		// Output URLs
 		$count = 0;
-		if(($get && $is_new) || ($urlfile && !$is_new)) {
+		if($get || $urlfile || $gwcs) {
 			if(file_exists($config['Path']['URL']) && $net != MUTE) {
 				$lines = @file($config['Path']['URL']);
 				shuffle($lines);
@@ -536,17 +537,16 @@
 				$url = get_url($url);
 				$age = $time > 0 ? $now - $time : 0;
 				if($url && $xnet == $net && $age < $config['URL']['Age'] && $age >= 0 && $status === 'OK') {
-					echo $is_new ? "U|$url|$age\n" : "$url\n";
+					echo $is_gwc2 ? "U|$url|$age\n" : "$url\n";
 					++$count;
 					if($count > $config['URL']['Output']) { break; }
 				}
 			}
-			if(!$count && $is_new) { echo "I|NO-URLS\n"; }
-			if($urlfile && !$is_new) { die(); } // Output only URLs for old style request
+			if(!$count && $is_gwc2) { echo "I|NO-URLS\n"; }
 		}
 	}
 	
 	// Tell client not to come back for another 30 minutes
-	if(!empty($_GET) && $page == '' && $is_new) {
+	if(!empty($_GET) && $data == '' && $is_gwc2) {
 		echo "I|access|period|1800\n";
 	}
