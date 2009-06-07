@@ -89,15 +89,15 @@
 	<?php date_default_timezone_set('UTC'); ?>
 	<ul id="navigation">
 		<?php if($config['Stats']['Enable']): ?>
-		<li><?php if($page == 'stats'): ?>Stats<?php else: ?><a href="?page=stats">Stats</a><?php endif; ?></li>
+		<li><?php if($data == 'stats'): ?>Stats<?php else: ?><a href="?data=stats">Stats</a><?php endif; ?></li>
 		<?php endif; ?>
-		<li><?php if($page == 'hosts'): ?>Hosts<?php else: ?><a href="?page=hosts">Hosts</a><?php endif; ?></li>
+		<li><?php if($data == 'hosts'): ?>Hosts<?php else: ?><a href="?data=hosts">Hosts</a><?php endif; ?></li>
 		<?php if(!$is_only_mute): ?>
-		<li><?php if($page == 'services'): ?>Services<?php else: ?><a href="?page=services">Services</a><?php endif; ?></li>
+		<li><?php if($data == 'services'): ?>Services<?php else: ?><a href="?data=services">Services</a><?php endif; ?></li>
 		<?php endif; ?>
 	</ul>
 
-	<?php if($page == 'stats' && $config['Stats']['Enable']): ?>
+	<?php if($data == 'stats' && $config['Stats']['Enable']): ?>
 	<div id="main">
 	<?php foreach($config['Network']['Support'] as $network): ?>
 	<?php
@@ -211,7 +211,7 @@
 	</div>
 	<?php endforeach; ?>
 	</div>
-	<?php elseif($page == 'hosts'): ?>
+	<?php elseif($data == 'hosts'): ?>
 	<div id="main">
 	<?php foreach($config['Network']['Support'] as $network): ?>
 	<div class="network">
@@ -267,7 +267,7 @@
 	</div>
 	<?php endforeach; ?>
 	</div>
-	<?php elseif($page == 'services' && !$is_only_mute): ?>
+	<?php elseif($data == 'services' && !$is_only_mute): ?>
 	<div id="main">
 	<?php foreach($config['Network']['Support'] as $network): ?>
 	<?php if($network != MUTE): ?>
