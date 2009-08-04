@@ -16,7 +16,7 @@
 	
 	$now = time();
 	ob_start(); // Enable output buffering
-	define('VERSION', 'R62');
+	define('VERSION', 'R63');
 	define('AGENT', 'Cachechu ' . VERSION);
 	define('DEFAULT_NET', 'gnutella2');
 	define('MUTE', 'mute');
@@ -117,7 +117,6 @@
 	$gwcs      = isset($_GET['gwcs']) ? $_GET['gwcs'] : '';
 	$hostfile  = isset($_GET['hostfile']) ? $_GET['hostfile'] : '';
 	$urlfile   = isset($_GET['urlfile']) ? $_GET['urlfile'] : '';
-	$statfile  = isset($_GET['statfile']) ? $_GET['statfile'] : '';
 	$is_gwc2   = ($get || $update) && !$gwcs; // Use GWC2 style if true
 	if(!$is_gwc2) {
 		$update = $host || $url ? 1 : 0;
@@ -152,10 +151,7 @@
 	$config['Path']['Ban']        = isset($config['Path']['Ban']) ? $config['Path']['Ban'] : 'data/bans.dat';
 	$config['Path']['Host']       = isset($config['Path']['Host']) ? $config['Path']['Host'] : 'data/hosts.dat';
 	$config['Path']['URL']        = isset($config['Path']['URL']) ? $config['Path']['URL'] : 'data/urls.dat';
-	$config['Path']['Stats']      = isset($config['Path']['Stats']) ? $config['Path']['Stats'] : 'data/stats.dat';
-	$config['Path']['Start']      = isset($config['Path']['Start']) ? $config['Path']['Start'] : 'data/start.dat';
 	$config['Interface']['Show']  = isset($config['Interface']['Show']) ? $config['Interface']['Show'] : 1;
-	$config['Stats']['Enable']    = isset($config['Stats']['Enable']) ? $config['Stats']['Enable'] : TRUE;
 	
 	if(!empty($_GET) && $data == '') {
 		header('Content-Type: text/plain');
@@ -167,118 +163,10 @@
 		$config['Path']['Ban']   = str_replace(NET_REPLACE, $net, $config['Path']['Ban']);
 		$config['Path']['Host']  = str_replace(NET_REPLACE, $net, $config['Path']['Host']);
 		$config['Path']['URL']   = str_replace(NET_REPLACE, $net, $config['Path']['URL']);
-		$config['Path']['Stats'] = str_replace(NET_REPLACE, $net, $config['Path']['Stats']);
-		$config['Path']['Start'] = str_replace(NET_REPLACE, $net, $config['Path']['Start']);
-		if($config['Stats']['Enable']) { // Log stats
-			$start_exists = file_exists($config['Path']['Start']);
-			$stats_exists = file_exists($config['Path']['Stats']);
-			if(!$start_exists) {
-				$dir = dirname($config['Path']['Start']);
-				if(!file_exists($dir)) {
-					@mkdir($dir, DIR_FLAGS, TRUE); // Create directory if it does not exist
-				}
-				// Add the start time for statistics
-				@file_put_contents($config['Path']['Start'], "$now|$net|\r\n");
-				$start_exists = file_exists($config['Path']['Start']);
-			}
-			if(!$stats_exists) {
-				$dir = dirname($config['Path']['Stats']);
-				if(!file_exists($dir)) {
-					@mkdir($dir, DIR_FLAGS, TRUE); // Create directory if it does not exist
-				}
-				@touch($config['Path']['Stats']);
-				$stats_exists = file_exists($config['Path']['Stats']);
-			}
-			if($stats_exists && $start_exists) {
-				$times = array();
-				$lines = @file($config['Path']['Start']);
-				foreach($lines as $line) {
-					@list($timestamp, $xnet) = explode('|', $line);
-					$xnet = trim($xnet) == '' ? DEFAULT_NET : $xnet;
-					if(is_numeric($timestamp)) { $times[$xnet] = $timestamp; }
-				}
-				$output_time = FALSE;
-				$output = '';
-				foreach($config['Network']['Support'] as $xnet) {
-					if(isset($times[$xnet])) {
-						$output .= $times[$xnet] . "|$xnet|\r\n";
-					} else if($xnet == $net) {
-						$output .= "$now|$xnet|\r\n";
-						$output_time = TRUE;
-					}
-				}
-				if($output_time) { @file_put_contents($config['Path']['Start'], $output); }
-				$file = @fopen($config['Path']['Stats'], 'r+');
-				// Lock the file to avoid concurrency issues with stats
-				if($file && @flock($file, LOCK_EX)) {
-					$clients = array();
-					$size = filesize($config['Path']['Stats']);
-					$contents = $size > 0 ? fread($file, $size) : '';
-					$lines = explode("\r\n", $contents);
-					$client_exists = FALSE;
-					foreach($lines as $line) {
-						@list($version, $gets, $updates, $pings, $requests, $xnet) = explode('|', $line);
-						$xnet = trim($xnet) == '' ? DEFAULT_NET : $xnet;
-						$version = trim($version);
-						if($version != '') {
-							$clients[$version][$xnet] = array('Gets' => $gets, 'Updates' => $updates, 'Pings' => $pings, 'Requests' => $requests);
-						}
-						if($xnet == $net && $version == $client) { $client_exists = TRUE; }
-					}
-					if(!$client_exists) {
-						$clients[$client][$net] = array('Gets' => 0, 'Updates' => 0, 'Pings' => 0, 'Requests' => 0);
-					}
-					$clients[$client][$net]['Gets'] += $get || $hostfile || $urlfile || $gwcs ? 1 : 0;
-					$clients[$client][$net]['Updates'] += $update ? 1 : 0;
-					$clients[$client][$net]['Pings'] += $ping ? 1 : 0;
-					$clients[$client][$net]['Requests'] += 1;
-					$output = '';
-					foreach($clients as $version => $nets) {
-						foreach($nets as $xnet => $stats) {
-							$output .= $version;
-							foreach($stats as $stat) { $output .= "|$stat"; }
-							$output .= "|$xnet|\r\n";
-						}
-					}
-					@ftruncate($file, 0); // Clear out stats
-					@rewind($file); // Go back to start of file
-					@fwrite($file, $output); // Recreate stats
-					if($file) { @flock($file, LOCK_UN); }
-				}
-				if($file) { @fclose($file); }
-			}
-		}
 	} else if(file_exists('main.php') && $config['Interface']['Show']) {
 		require('main.php');
 	} else {
 		header('Content-Type: text/plain');
-	}
-	
-	// Return stats information
-	if($statfile) {
-		$time = $now;
-		$lines = file_exists($config['Path']['Start']) ? @file($config['Path']['Start']) : array();
-		foreach($lines as $line) {
-			@list($timestamp, $xnet) = explode('|', $line);
-			$xnet = trim($xnet) == '' ? DEFAULT_NET : $xnet;
-			if(is_numeric($timestamp) && $xnet == $net) { $time = $timestamp; }
-		}
-		$lines = file_exists($config['Path']['Stats']) ? @file($config['Path']['Stats']) : array();
-		$hour = ($now - $time) / 60 / 60;
-		if($hour == 0) { $hour = 1; }
-		$total_updates = 0;
-		$total_requests = 0;
-		foreach($lines as $line) {
-			@list($version, $gets, $updates, $pings, $requests, $xnet) = explode('|', $line);
-			$xnet = trim($xnet) == '' ? DEFAULT_NET : $xnet;
-			if($xnet == $net && $version != '') {
-				$total_updates += $updates;
-				$total_requests += $requests;
-			}
-		}
-		$hourly_updates = intval($total_updates / $hour);
-		$hourly_requests = intval($total_requests / $hour);
-		die("$total_requests\n$hourly_updates\n$hourly_requests\n");
 	}
 	
 	// Basic spam protection (1 update per hour [default])
