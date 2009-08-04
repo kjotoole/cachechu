@@ -4,19 +4,18 @@ body,tfoot,.odd{background:#fff;}
 a{color:#3465a4;}
 a:visited{color:#75507b;}
 a:hover,.update a{color:#c00;}
-col.stats{width:10%;border-left:1px solid #d3d7cf;}
 h1{font-size:1.5em;}
 h1,.update{padding:0.5em 0;}
 h2{font-size:1em;background:#555753;}
 table{width:100%;border-collapse:collapse;}
-thead,tr.caption,#footer{background:#2e3436;}
+thead,#footer{background:#2e3436;}
 th,td{text-align:left;}
 th,td,h2,#footer,#navigation{padding:0.3em 0.5em;}
 tfoot td{border-top:1px solid #babdb6;}
-tbody th,tbody td{border-top:1px solid #d3d7cf;}
-tbody th,tfoot td,.stats td,.stats th{text-align:right;}
+tbody td{border-top:1px solid #d3d7cf;}
+tfoot td{text-align:right;}
 #main{margin:0 auto 1em;min-width:40em;max-width:60em;}
-#footer,#footer a,h2,thead,tr.caption{color:#fff;}
+#footer,#footer a,h2,thead{color:#fff;}
 #footer,body,tfoot,.caption th{text-align:center;}
 #navigation{list-style:none;}
 #navigation,.update{border-top:1px solid #2e3436;}
