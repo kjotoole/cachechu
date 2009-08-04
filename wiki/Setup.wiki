@@ -2,36 +2,55 @@
 #labels Featured,Phase-Deploy
 
 == Introduction ==
-  Cachechu is a simple G2 GWebCache written in PHP.
+  Cachechu is a simple GWebCache written in PHP that supports multiple networks.
 
 == File List ==
  * *index.php*                - Cachechu PHP code
  * *main.php*                 - Web interface
  * *main.css*                 - main stylesheet
- * *robots.txt*               - blocks CoralWebPrx
- * *data/urls.dat.sample*     - default list of URLs (remove .sample to use)
- * *data/stats.dat.sample*    - empty stats file (remove .sample to use)
- * *data/start.dat.sample*    - empty start file (remove .sample to use)
- * *config/config.ini.sample* - default config file (remove .sample to use)
+ * *data/gnutella2/urls.dat.sample* - default list of URLs for Gnutella2 (remove .sample to use)
+ * *data/gnutella/urls.dat.sample*  - default list of URLs for Gnutella (remove .sample to use)
+ * *data/foxy/urls.dat.sample*      - default list of URLs for Foxy (remove .sample to use)
  * *readme.txt*               - setup information
 
 == Requirements ==
   # The following paths require write (and read) access:
+    * data/`<`network>/bans.dat
+    * data/`<`network>/hosts.dat
+    * data/`<`network>/urls.dat
+    * data/update.dat (if update notification enabled)
+    Replace `<`network> by the networks you support.
+  # The following paths MAY require write (and read) access, depending on configuration:
     * data/bans.dat
     * data/hosts.dat
     * data/urls.dat
-    * data/stats.dat
-    * data/start.dat
   # The following file should be set as the directory index:
     * index.php
   # To enable stat logging, the following files should exist:
     * data/stats.dat
     * data/start.dat
-  # If your host cannot test clients on a port other than 80, set `[`Host`]` Testing in config.ini to 0.
+  # If your host cannot test clients on a port other than 80, the following configuration should be present:
+{{{
+[Host]
+Testing = 0
+}}}
 
 ==Web interface==
-  # 'Test Cache' outputs a 'get' and 'ping' GWebCache request.
-  # 'Update' performs a URL 'update' GWebCache request with the URL entered.
+  # To disable the Web interface, the following configuration should be present:
+{{{
+[Interface]
+Show = 0
+}}}
+  # To disable info pages on the Web interface, the following configuration should be present:
+{{{
+[Interface]
+Info = 0
+}}}
+  # Hosts shows the country (if GeoIP present), IP, port, client, timestamp, and age of hosts for each network.
+  # Services shows the country (if GeoIP present), URL, IP, client, timestamp of caches for each network.
 
 ==Compatibility==
-  Cachechu has been tested under PHP 5.2.9.
+  Cachechu has been tested under PHP 5.3.0.
+
+==Notes==
+  Stats support was removed from Cachechu 1.2.
