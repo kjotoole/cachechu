@@ -29,8 +29,6 @@ III. Requirements
       data/<network>/bans.dat
       data/<network>/hosts.dat
       data/<network>/urls.dat
-      data/<network>/stats.dat (if stat logging enabled)
-      data/<network>/start.dat (if stat logging enabled)
       data/update.dat (if update notification enabled)
 
         Replace <network> by the networks you support.
@@ -41,19 +39,12 @@ III. Requirements
       data/bans.dat
       data/hosts.dat
       data/urls.dat
-      data/stats.dat (if stat logging enabled)
-      data/start.dat (if stat logging enabled)
 
     4.  The following file should be set as the directory index:
 
       index.php
 
-    5.  To disable stat logging, the following configuration should be present:
-
-      [Stats]
-      Enable = 0;
-
-    6.  If your host cannot test clients on a port other than 80,
+    5.  If your host cannot test clients on a port other than 80,
         the following configuration should be present:
 
       [Host]
@@ -71,14 +62,16 @@ IV. Web interface
       [Interface]
       Info = 0
 
-    3.  Stats shows the statistics for each supported network, if enabled.
-
-    4.  Hosts shows the country (if GeoIP present), IP, port, client, timestamp,
+    3.  Hosts shows the country (if GeoIP present), IP, port, client, timestamp,
         and age of hosts for each network.
 
-    5.  Services shows the country (if GeoIP present), URL, IP, client, timestamp of
+    4.  Services shows the country (if GeoIP present), URL, IP, client, timestamp of
         caches for each network.
 
 V. Compatibility
 
-    Cachechu has been tested under PHP 5.2.9.
+    Cachechu has been tested under PHP 5.3.0.
+
+VI. Notes
+
+    Stats support was removed from Cachechu 1.2.

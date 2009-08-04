@@ -8,7 +8,6 @@
 	
 	$config['Path']['Update'] = isset($config['Path']['Update']) ? $config['Path']['Update'] : 'data/update.dat';
 	$config['Interface']['Info'] = isset($config['Interface']['Info']) ? $config['Interface']['Info'] : 1;
-	$config['Interface']['StatsLimit'] = isset($config['Interface']['StatsLimit']) ? $config['Interface']['StatsLimit'] : 10;
 	$config['Interface']['Update'] = isset($config['Interface']['Update']) ? $config['Interface']['Update'] : 1;
 	$is_only_mute = (in_array(MUTE, $config['Network']['Support']) && count($config['Network']['Support']) == 1);
 	
@@ -88,130 +87,13 @@
 	<?php if($config['Interface']['Info']): ?>
 	<?php date_default_timezone_set('UTC'); ?>
 	<ul id="navigation">
-		<?php if($config['Stats']['Enable']): ?>
-		<li><?php if($data == 'stats'): ?>Stats<?php else: ?><a href="?data=stats">Stats</a><?php endif; ?></li>
-		<?php endif; ?>
 		<li><?php if($data == 'hosts'): ?>Hosts<?php else: ?><a href="?data=hosts">Hosts</a><?php endif; ?></li>
 		<?php if(!$is_only_mute): ?>
 		<li><?php if($data == 'services'): ?>Services<?php else: ?><a href="?data=services">Services</a><?php endif; ?></li>
 		<?php endif; ?>
 	</ul>
 
-	<?php if($data == 'stats' && $config['Stats']['Enable']): ?>
-	<div id="main">
-	<?php foreach($config['Network']['Support'] as $network): ?>
-	<?php
-		$times = array();
-		$path = str_replace(NET_REPLACE, $network, $config['Path']['Start']); 
-		$lines = file_exists($path) ? @file($path) : array();
-		foreach($lines as $line) {
-			@list($timestamp, $xnet) = explode('|', $line);
-			$xnet = trim($xnet) == '' ? DEFAULT_NET : $xnet;
-			if(is_numeric($timestamp)) { $times[$xnet] = $timestamp; }
-		}
-		$path = str_replace(NET_REPLACE, $network, $config['Path']['Stats']);	
-		$lines = file_exists($path) ? @file($path) : array();
-		$hour = 1;
-		if(isset($times[$network])) {
-			$timestamp = $times[$network];
-			$hour = ($now - $timestamp) / 60 / 60;
-		} else {
-			$timestamp = $now;
-		}
-		if($hour == 0) { $hour = 1; }
-		$total_gets = 0;
-		$total_updates = 0;
-		$total_pings = 0;
-		$total_requests = 0;
-		$stats = array();
-		foreach($lines as $line) {
-			@list($version, $gets, $updates, $pings, $requests, $xnet) = explode('|', $line);
-			$xnet = trim($xnet) == '' ? DEFAULT_NET : $xnet;
-			$version = trim($version);
-			if($xnet == $network && $version != '') {
-				$stats["Gets"][$version] = $gets;
-				$stats["Updates"][$version] = $updates;
-				$stats["Pings"][$version] = $pings;
-				$stats["Requests"][$version] = $requests;
-				$total_gets += $gets;
-				$total_updates += $updates;
-				$total_pings += $pings;
-				$total_requests += $requests;
-			}
-		}
-	?>
-	<div class="network">
-	<h2><?php echo ucwords($network); ?> Stats</h2>
-	<table summary="Cache stats for <?php echo ucwords($network); ?>" class="stats">
-		<colgroup>
-			<col>
-			<col class="stats">
-			<col class="stats">
-			<col class="stats">
-			<col class="stats">
-		</colgroup>
-		<thead>
-			<tr>
-				<td></td>
-				<th scope="col">Requests</th>
-				<th scope="col">Gets</th>
-				<th scope="col">Updates</th>
-				<th scope="col">Pings</th>
-			</tr>
-		</thead>
-		<tfoot>
-			<tr>
-				<td colspan="5">
-					Start Date:
-					<?php echo date('Y-m-d H:i', $timestamp); ?>Z
-				</td>
-			</tr>
-		</tfoot>
-		<tbody>
-			<tr class="odd">
-				<th scope="row">Total:</th>
-				<td><?php echo number_format($total_requests); ?>
-				<td><?php echo number_format($total_gets); ?></td>
-				<td><?php echo number_format($total_updates); ?></td>
-				<td><?php echo number_format($total_pings); ?></td>
-			</tr>
-			<tr class="even">
-				<th scope="row">Hourly:</th>
-				<td><?php echo number_format($total_requests / $hour, 1); ?>
-				<td><?php echo number_format($total_gets / $hour, 1); ?></td>
-				<td><?php echo number_format($total_updates / $hour, 1); ?></td>
-				<td><?php echo number_format($total_pings / $hour, 1); ?></td>
-			</tr>
-			<tr class="caption">
-				<th colspan="5">Top <?php echo $config['Interface']['StatsLimit']; ?></th>
-			</tr>
-			<?php
-				$count = 0;
-				$requests = isset($stats['Requests']) ? $stats['Requests'] : array();
-				arsort($requests, SORT_NUMERIC);
-				$requests = array_slice($requests, 0, $config['Interface']['StatsLimit'], TRUE);
-				foreach($requests as $vendor => $reqs) {
-					$reqs = number_format($reqs);
-					$gets = isset($stats['Gets'][$vendor]) ? number_format($stats['Gets'][$vendor]) : 0;
-					$updates = isset($stats['Updates'][$vendor]) ? number_format($stats['Updates'][$vendor]) : 0;
-					$pings = isset($stats['Pings'][$vendor]) ? number_format($stats['Pings'][$vendor]) : 0;
-					echo '<tr class="';
-					echo $count % 2 == 0 ? 'odd' : 'even';
-					echo '"><th scope="row">', substr(htmlentities($vendor), 0, 50), '</th>';
-					echo "<td>$reqs</td>";
-					echo "<td>$gets</td>";
-					echo "<td>$updates</td>";
-					echo "<td>$pings</td>";
-					echo "</tr>";
-					++$count;
-				}
-			?>
-		</tbody>
-	</table>
-	</div>
-	<?php endforeach; ?>
-	</div>
-	<?php elseif($data == 'hosts'): ?>
+	<?php if($data == 'hosts'): ?>
 	<div id="main">
 	<?php foreach($config['Network']['Support'] as $network): ?>
 	<div class="network">
