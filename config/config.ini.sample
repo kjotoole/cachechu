@@ -20,14 +20,9 @@ Testing   = 1 ; If the server can only test port 80, set this option to 0 [defau
 Ban       = data/<network>/bans.dat
 Host      = data/<network>/hosts.dat
 URL       = data/<network>/urls.dat
-Stats     = data/<network>/stats.dat
-Start     = data/<network>/start.dat
 Update    = data/update.dat
 
 [Interface]
 Show      = 1 ; If non-zero, will show Web interface
-Info      = 1 ; If non-zero, will show stats, services, hosts
+Info      = 1 ; If non-zero, will show services and hosts
 Update    = 1 ; If non-zero, will show if cache needs an update
-
-[Stats]
-Enable    = 1;

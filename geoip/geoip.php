@@ -175,7 +175,7 @@ class GeoIP {
 "Iceland", "Italy", "Jamaica", "Jordan", "Japan", "Kenya", "Kyrgyzstan",
 "Cambodia", "Kiribati", "Comoros", "Saint Kitts and Nevis", "Korea, Democratic People's Republic of",
 "Korea, Republic of", "Kuwait", "Cayman Islands",
-"Kazakstan", "Lao People's Democratic Republic", "Lebanon", "Saint Lucia",
+"Kazakhstan", "Lao People's Democratic Republic", "Lebanon", "Saint Lucia",
 "Liechtenstein", "Sri Lanka", "Liberia", "Lesotho", "Lithuania", "Luxembourg",
 "Latvia", "Libyan Arab Jamahiriya", "Morocco", "Monaco", "Moldova, Republic of",
 "Madagascar", "Marshall Islands", "Macedonia",
@@ -311,7 +311,7 @@ function geoip_open($filename, $flags) {
   if ($gi->flags & GEOIP_SHARED_MEMORY) {
     $gi->shmid = @shmop_open (GEOIP_SHM_KEY, "a", 0, 0);
     } else {
-    $gi->filehandle = fopen($filename,"rb");
+    $gi->filehandle = fopen($filename,"rb") or die( "Can not open $filename\n" );
     if ($gi->flags & GEOIP_MEMORY_CACHE) {
         $s_array = fstat($gi->filehandle);
         $gi->memory_buffer = fread($gi->filehandle, $s_array['size']);
@@ -362,7 +362,9 @@ function geoip_country_id_by_addr($gi, $addr) {
 function geoip_country_code_by_addr($gi, $addr) {
   if ($gi->databaseType == GEOIP_CITY_EDITION_REV1) {
     $record = geoip_record_by_addr($gi,$addr);
-    return $record->country_code;
+    if ( $record !== false ) {
+      return $record->country_code;
+    }
   } else {
     $country_id = geoip_country_id_by_addr($gi,$addr);
     if ($country_id !== false) {
