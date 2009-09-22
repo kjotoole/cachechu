@@ -16,7 +16,7 @@
 	
 	$now = time();
 	ob_start(); // Enable output buffering
-	define('VERSION', '1.2');
+	define('VERSION', 'R70');
 	define('AGENT', 'Cachechu ' . VERSION);
 	define('DEFAULT_NET', 'gnutella2');
 	define('MUTE', 'mute');
@@ -199,7 +199,9 @@
 	// Pong!
 	if($ping) {
 		if($is_gwc2) {
-			echo 'I|pong|', AGENT, '|', implode('-', $config['Network']['Support']), "\n";
+			$nets = implode('|', $config['Network']['Support']);
+			echo 'I|pong|', AGENT, "|$nets\n";
+			echo "I|networks|$nets\n";
 		} else {
 			echo 'PONG ', AGENT, "\n";
 		}
@@ -317,14 +319,23 @@
 					}
 				} else {
 					$query = "$file?ping=1&client=TEST&version=" . urlencode(AGENT);
-					$contents = download_data($domain, $port, get_input($query, $domain), TRUE);
+					$contents = download_data($domain, $port, get_input($query, $domain), TRUE) . "\n";
+					if($contents) {
+						$query = "$file?hostfile=1&client=TEST&version=" . urlencode(AGENT);
+						$contents .= download_data($domain, $port, get_input($query, $domain), TRUE) . "\n";
+					}
+					if($contents) {
+						$query = "$file?urlfile=1&client=TEST&version=" . urlencode(AGENT);
+						$contents .= download_data($domain, $port, get_input($query, $domain), TRUE);
+					}
 				}
 				$contents = trim($contents);
 				if($contents) { $error = FALSE; }
 				// Validate the GWebCache output
-				$lines = explode("\n", $contents);
+				$lines = preg_split("/\r\n|\r|\n/", $contents, NULL, PREG_SPLIT_NO_EMPTY);
 				foreach($lines as $line){
-					@list($field1, $field2, $field3) = explode('|', trim($line));
+					$line = trim($line);
+					@list($field1, $field2, $field3) = explode('|', $line);
 					if(strtoupper($field1) == 'I') {
 						if(strtolower($field2) == 'pong') {
 							$test_client = substr(trim($field3), 0, 50);
@@ -333,6 +344,8 @@
 					} else if(strtoupper($field1) == 'U' && preg_match(URL_REGEX, $field2) && ctype_digit($field3)) {
 					} else if(strlen($field1) > 5 && substr_compare($field1, 'PONG ', 0, 5, TRUE) == 0) {
 						$test_client = substr(trim(substr($field1, 5)), 0, 50);
+					} else if(!$is_gwc2 && preg_match(IP_REGEX, $line)) {
+					} else if(!$is_gwc2 && preg_match(URL_REGEX, $line)) {
 					} else {
 						$error = TRUE;
 						break;
