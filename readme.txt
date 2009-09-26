@@ -1,5 +1,5 @@
 ****************************************************************************
-Cachechu 1.2
+Cachechu 1.3
 kevogod
 http://code.google.com/p/cachechu/
 ****************************************************************************
@@ -16,6 +16,7 @@ II. File List
     o   data/gnutella2/urls.dat.sample - default list of URLs for Gnutella2 (remove .sample to use)
     o   data/gnutella/urls.dat.sample  - default list of URLs for Gnutella (remove .sample to use)
     o   data/foxy/urls.dat.sample      - default list of URLs for Foxy (remove .sample to use)
+    o   data/update.dat                - contains the version number of this cache
     o   config/config.ini.sample       - default config file (remove .sample to use)
     o   readme.txt                     - this file
 

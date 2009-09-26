@@ -16,7 +16,7 @@
 	
 	$now = time();
 	ob_start(); // Enable output buffering
-	define('VERSION', 'R70');
+	define('VERSION', '1.3');
 	define('AGENT', 'Cachechu ' . VERSION);
 	define('DEFAULT_NET', 'gnutella2');
 	define('MUTE', 'mute');
@@ -24,7 +24,7 @@
 	define('SANITIZE_REGEX', '[|\\r\\n]');
 	define('GNUTELLA', 'gnutella');
 	define('NET_REPLACE', '<network>');
-	define('BLOCK_REGEX', '%^Mozilla/4\\.0$|^CoralWebPrx.*$|^FTWebCache.*$%');
+	define('BLOCK_REGEX', '%^Mozilla/4\\.0$|^CoralWebPrx.*$|^(?:FT|M)WebCache.*$%');
 	define('IP_REGEX', '/\\A((?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)):([1-9][0-9]{0,4})\\z/');
 	define('TRAIL_REGEX', '%(?<=\\.(?:asp|cfm|cgi|htm|jsp|php))/.*$%i');
 	define('INDEX_REGEX', '/(?:default|index)\\.(?:aspx?|cfm|cgi|htm|html|jsp|php)$/iD');
@@ -36,7 +36,6 @@
 	
 	// Request data from a host asynchronously
 	function download_data($address, $port, $input, $web) {
-		ini_set('user_agent', AGENT);
 		$socket = stream_socket_client("tcp://$address:$port", $errno, $errstr, 10, STREAM_CLIENT_CONNECT|STREAM_CLIENT_ASYNC_CONNECT);
 		stream_set_blocking($socket, 0); // Non-blocking IO
 		$read = null;
@@ -70,7 +69,7 @@
 	
 	// Format Web request
 	function get_input($query, $domain) {
-		return "GET $query HTTP/1.0\r\nHost: $domain\r\nConnection: Close\r\n\r\n";
+		return "GET $query HTTP/1.0\r\nHost: $domain\r\nConnection: Close\r\nUser-Agent:" . AGENT . "\r\n\r\n";
 	}
 	
 	// Sanitizes input and makes usable for file
@@ -85,7 +84,7 @@
 		$new_url = rtrim($url, '/'); // Removes all trailing slashes
 		if($new_url != $url) { $url = $new_url . '/'; } // Adds trailing slash
 		if(!preg_match('/nyuc?d\\.net/s', $url) && preg_match(URL_REGEX, $url, $match)) {
-			if($match['port']) {
+			if(isset($match['port']) && $match['port'] != '') {
 				$port = ltrim($match['port'], '0');
 				if($port >= 1 && $port <= 65535) { // Must have valid port
 					$replace = $port == 80 ? '' : ':' . $port; // Remove port 80 from URL
@@ -318,14 +317,14 @@
 						$contents .= download_data($domain, $port, get_input($query, $domain), TRUE);
 					}
 				} else {
-					$query = "$file?ping=1&client=TEST&version=" . urlencode(AGENT);
+					$query = "$file?ping=1&net=$net&client=TEST&version=" . urlencode(AGENT);
 					$contents = download_data($domain, $port, get_input($query, $domain), TRUE) . "\n";
 					if($contents) {
-						$query = "$file?hostfile=1&client=TEST&version=" . urlencode(AGENT);
+						$query = "$file?hostfile=1&net=$net&client=TEST&version=" . urlencode(AGENT);
 						$contents .= download_data($domain, $port, get_input($query, $domain), TRUE) . "\n";
 					}
 					if($contents) {
-						$query = "$file?urlfile=1&client=TEST&version=" . urlencode(AGENT);
+						$query = "$file?urlfile=1&net=$net&client=TEST&version=" . urlencode(AGENT);
 						$contents .= download_data($domain, $port, get_input($query, $domain), TRUE);
 					}
 				}
