@@ -2,6 +2,6 @@
 #labels Phase-Deploy,Featured
 
 =Adding Flags=
-  # Download [http://cachechu.googlecode.com/files/flags-1.2.zip flags-1.2.zip].
+  # Download [http://cachechu.googlecode.com/files/flags-1.3.zip flags-1.3.zip].
   # Extract the *geoip* and *flags* folders to your Cachechu install directory.
   # The hosts and services pages should now have a flags column on the left.
