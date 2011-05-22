@@ -29,10 +29,10 @@
   # To enable stat logging, the following files should exist:
     * data/stats.dat
     * data/start.dat
-  # If your host cannot test clients on a port other than 80, the following configuration should be present:
+  # If your host cannot test clients on a port other than 80, the following configuration should *not* be present:
 {{{
 [Host]
-Testing = 0
+Verify = 1
 }}}
 
 ==Web interface==
