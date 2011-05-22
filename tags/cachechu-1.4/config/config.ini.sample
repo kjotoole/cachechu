@@ -1,0 +1,28 @@
+; Remove .sample from file to use
+[Network]
+Support   = Gnutella2 ; Comma-delimited list of networks supported (e.g. Gnutella2, Gnutella)
+
+[Cache]
+Advertise = 1 ; If non-zero, will advertise cache to other caches [default 1]
+BanTime   = 3300 ; Amount of time to ban hosts after one update [default 1 hour]
+
+[URL]
+Age       = 604800 ; Max age to display a URL [default 1 week]
+Output    = 30 ; Max URLs to output [default 30]
+TestAge   = 86400 ; Min age to test a URL [default 1 day]
+
+[Host]
+Age       = 86400 ; Max age to keep in cache [default 1 day]
+Output    = 30 ; Max hosts to output and store [default 30]
+Verify    = 0 ; Verifies the host by connecting to it [default 0]
+
+[Path]
+Ban       = data/<network>/bans.dat
+Host      = data/<network>/hosts.dat
+URL       = data/<network>/urls.dat
+Update    = data/update.dat
+
+[Interface]
+Show      = 1 ; If non-zero, will show Web interface
+Info      = 1 ; If non-zero, will show services and hosts
+Update    = 1 ; If non-zero, will show if cache needs an update
