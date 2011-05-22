@@ -1,5 +1,5 @@
 <?php
-	// Copyright (c) kevogod, 2008-2009.
+	// Copyright (c) kevogod, 2008-2011.
 	//
 	// This program is free software: you can redistribute it and/or modify
 	// it under the terms of the GNU General Public License as published by
@@ -14,9 +14,14 @@
 	// You should have received a copy of the GNU General Public License
 	// along with this program.  If not, see <http://www.gnu.org/licenses/>.
 	
+	$client = isset($_SERVER['HTTP_USER_AGENT']) ? $_SERVER['HTTP_USER_AGENT'] : '';
+	if($client == "Shareaza") { // To reduce hammering, attempt to ignore Shareaza clients with no specific version information
+		header('HTTP/1.0 403 Forbidden');
+		die("");
+	}
 	$now = time();
 	ob_start(); // Enable output buffering
-	define('VERSION', '1.3');
+	define('VERSION', '1.4');
 	define('AGENT', 'Cachechu ' . VERSION);
 	define('DEFAULT_NET', 'gnutella2');
 	define('MUTE', 'mute');
@@ -104,7 +109,6 @@
 	$data      = isset($_GET['data']) ? strtolower(trim($_GET['data'])) : '';
 	$vendor    = isset($_GET['client']) ? ucwords(strtolower($_GET['client'])) : '';
 	$version   = isset($_GET['version']) ? $_GET['version'] : '';
-	$client    = isset($_SERVER['HTTP_USER_AGENT']) ? $_SERVER['HTTP_USER_AGENT'] : '';
 	$client    = sanitize($client);
 	$client    = $client == 'Mozilla/4.0' && $vendor == 'Foxy' ? sanitize("$vendor $version") : $client;
 	$get       = isset($_GET['get']) ? $_GET['get'] : '';
@@ -141,7 +145,7 @@
 	}
 	$config['Host']['Age']        = isset($config['Host']['Age']) ? $config['Host']['Age'] : 86400;
 	$config['Host']['Output']     = isset($config['Host']['Output']) ? $config['Host']['Output'] : 30;
-	$config['Host']['Testing']    = isset($config['Host']['Testing']) ? $config['Host']['Testing'] : 1;
+	$config['Host']['Verify']     = isset($config['Host']['Verify']) ? $config['Host']['Verify'] : 0;
 	$config['URL']['Age']         = isset($config['URL']['Age']) ? $config['URL']['Age'] : 604800;
 	$config['URL']['Output']      = isset($config['URL']['Output']) ? $config['URL']['Output'] : 30;
 	$config['URL']['TestAge']     = isset($config['URL']['TestAge']) ? $config['URL']['TestAge'] : 86400;
@@ -210,7 +214,7 @@
 	if($update && $host) {
 		$error = TRUE;
 		if(strpos($host, $remote_ip) !== FALSE && preg_match(IP_REGEX, $host)) {
-			if($config['Host']['Testing'] && $net != 'foxy') {
+			if($config['Host']['Verify'] && $net != 'foxy') {
 				list($ip, $port) = explode(':', $host);
 				$output = trim(download_data($ip, $port, "GNUTELLA CONNECT/0.6\r\n\r\n", FALSE));
 				if($output != '') { $error = FALSE; }
