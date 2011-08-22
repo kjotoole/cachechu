@@ -21,7 +21,7 @@
 	}
 	$now = time();
 	ob_start(); // Enable output buffering
-	define('VERSION', '1.4');
+	define('VERSION', '1.5');
 	define('AGENT', 'Cachechu ' . VERSION);
 	define('DEFAULT_NET', 'gnutella2');
 	define('MUTE', 'mute');
