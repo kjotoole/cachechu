@@ -105,7 +105,12 @@
 		}
 	}
 	
-	$remote_ip = $_SERVER['REMOTE_ADDR'];
+	// When using CloudFlare CDN, use HTTP_CF_CONNECTING_IP instead of REMOTE_ADDR to get correct IP address of requesting client.
+	if (isset($_SERVER['HTTP_CF_CONNECTING_IP'])) {
+		$remote_ip = $_SERVER['HTTP_CF_CONNECTING_IP'];
+	} else {
+		$remote_ip = $_SERVER['REMOTE_ADDR'];
+	}
 	$data      = isset($_GET['data']) ? strtolower(trim($_GET['data'])) : '';
 	$vendor    = isset($_GET['client']) ? ucwords(strtolower($_GET['client'])) : '';
 	$version   = isset($_GET['version']) ? $_GET['version'] : '';
