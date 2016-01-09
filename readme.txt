@@ -1,7 +1,7 @@
 ****************************************************************************
-Cachechu 1.3
+Cachechu 1.6
 kevogod
-http://code.google.com/p/cachechu/
+https://github.com/kevogod/cachechu
 ****************************************************************************
 
 I. Description
