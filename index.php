@@ -1,5 +1,5 @@
 <?php
-	// Copyright (c) kevogod, 2008-2011.
+	// Copyright (c) kevogod, 2008-2016.
 	//
 	// This program is free software: you can redistribute it and/or modify
 	// it under the terms of the GNU General Public License as published by
@@ -41,7 +41,8 @@
 	
 	// Request data from a host asynchronously
 	function download_data($address, $port, $input, $web) {
-		$socket = stream_socket_client("tcp://$address:$port", $errno, $errstr, 10, STREAM_CLIENT_CONNECT|STREAM_CLIENT_ASYNC_CONNECT);
+		$protocol = ($port == 443) ? "ssl" : "tcp";
+		$socket = stream_socket_client("$protocol://$address:$port", $errno, $errstr, 10, STREAM_CLIENT_CONNECT|STREAM_CLIENT_ASYNC_CONNECT);
 		stream_set_blocking($socket, 0); // Non-blocking IO
 		$read = null;
 		$write = array($socket);
@@ -104,13 +105,8 @@
 			return FALSE; // URL is invalid or a Coral Cache
 		}
 	}
-	
-	// When using CloudFlare CDN, use HTTP_CF_CONNECTING_IP instead of REMOTE_ADDR to get correct IP address of requesting client.
-	if (isset($_SERVER['HTTP_CF_CONNECTING_IP'])) {
-		$remote_ip = $_SERVER['HTTP_CF_CONNECTING_IP'];
-	} else {
-		$remote_ip = $_SERVER['REMOTE_ADDR'];
-	}
+
+	$remote_ip = $_SERVER['REMOTE_ADDR'];
 	$data      = isset($_GET['data']) ? strtolower(trim($_GET['data'])) : '';
 	$vendor    = isset($_GET['client']) ? ucwords(strtolower($_GET['client'])) : '';
 	$version   = isset($_GET['version']) ? $_GET['version'] : '';
@@ -121,6 +117,8 @@
 	$net       = isset($_GET['net']) ? strtolower($_GET['net']) : '';
 	$ping      = isset($_GET['ping']) ? $_GET['ping'] : '';
 	$update    = isset($_GET['update']) ? $_GET['update'] : '';
+	// Do not allow updates for clients using CloudFlare CDN
+	$update    = $update && !isset($_SERVER['HTTP_CF_CONNECTING_IP']);
 	$url       = isset($_GET['url']) ? trim($_GET['url']) : '';
 	$gwcs      = isset($_GET['gwcs']) ? $_GET['gwcs'] : '';
 	$hostfile  = isset($_GET['hostfile']) ? $_GET['hostfile'] : '';

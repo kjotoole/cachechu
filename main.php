@@ -1,8 +1,8 @@
 <?php
 	if(!isset($config)): die(); endif;
 	
-	define('UPDATE_DOMAIN', 'cachechu.googlecode.com');
-	define('UPDATE_PATH', '/svn/VERSION');	
+	define('UPDATE_DOMAIN', 'raw.githubusercontent.com');
+	define('UPDATE_PATH', '/kevogod/cachechu/master/data/update.dat');
 	define('GEOIP_PATH', 'geoip/geoip.php');
 	define('GEOIP_DATA_PATH', 'geoip/GeoIP.dat');
 	
@@ -48,7 +48,7 @@
 
 <body>
 	<h1>
-		<a href="http://code.google.com/p/cachechu/"
+		<a href="https://github.com/kevogod/cachechu"
 			title="Cachechu Projects Page">Cachechu GWebCache</a>
 	</h1>
 	
@@ -67,14 +67,14 @@
 			}
 			if($age >= $config['URL']['Age']) {
 				$domain = UPDATE_DOMAIN;
-				$contents = trim(download_data(UPDATE_DOMAIN, 80, get_input(UPDATE_PATH, UPDATE_DOMAIN), TRUE));
+				$contents = trim(download_data(UPDATE_DOMAIN, 443, get_input(UPDATE_PATH, UPDATE_DOMAIN), TRUE));
 				if($contents != '') { @file_put_contents($config['Path']['Update'], $contents); }
 			}
 			if(file_exists($config['Path']['Update'])):
 				$latest = substr(trim(@file_get_contents($config['Path']['Update'])), 0, 5);
 				if($latest != '' && $latest != VERSION): ?>
 					<div class="update">
-						<a href="http://code.google.com/p/cachechu/downloads/list">
+						<a href="https://github.com/kevogod/cachechu">
 							GWebCache is out of date. Update to Cachechu <?php echo $latest; ?>.
 						</a>
 					</div>
