@@ -3,7 +3,7 @@
 	
 	define('UPDATE_DOMAIN', 'raw.githubusercontent.com');
 	define('UPDATE_PATH', '/kevogod/cachechu/master/data/update.dat');
-	define('GEOIP_PATH', 'geoip/geoip.php');
+	define('GEOIP_PATH', 'vendor/autoload.php');
 	define('GEOIP_DATA_PATH', 'geoip/GeoIP.dat');
 	
 	$config['Path']['Update'] = isset($config['Path']['Update']) ? $config['Path']['Update'] : 'data/update.dat';
