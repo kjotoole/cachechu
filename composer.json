@@ -1,0 +1,5 @@
+{
+    "require": {
+        "geoip/geoip": "~1.14"
+    }
+}
